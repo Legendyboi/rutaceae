@@ -1,0 +1,5 @@
+fn int main() {
+    int x = 10;
+    x = x + 32;
+    return x;
+}
