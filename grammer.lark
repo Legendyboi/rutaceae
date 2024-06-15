@@ -1,18 +1,30 @@
 %import common.WS
 %import common.CNAME
 %import common.NUMBER
+%import common.INT
+%import common.ESCAPED_STRING
 
 LITERAL: NUMBER 
 IDENTIFIER: CNAME
+declarator: CNAME
+
+start: program
+
+program: (func_def | statement)*
+
+?value: ESCAPED_STRING
+      | INT
 
 !return_stmt: "return" expr ";"
+!declaration_stmt: "let" (IDENTIFIER)? IDENTIFIER ("=" value )? ";"
 func_def: "fn" IDENTIFIER IDENTIFIER "(" (IDENTIFIER IDENTIFIER)? ("," IDENTIFIER IDENTIFIER)*  ")" block
 
 !expr: LITERAL
+     | IDENTIFIER
 
-?statement: return_stmt
+?statement: declaration_stmt 
+          | return_stmt
 !block: "{" statement* "}"
 
-program: func_def+
 
 %ignore WS

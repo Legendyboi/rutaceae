@@ -1,5 +1,4 @@
 fn int main() {
-    int x = 10;
-    x = x + 32;
+    let x = 10;
     return x;
 }
