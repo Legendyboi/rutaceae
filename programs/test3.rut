@@ -1,0 +1,5 @@
+fn int main() {
+    let x = 103;
+    print(x);
+    return 0;
+}

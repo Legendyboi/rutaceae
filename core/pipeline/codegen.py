@@ -70,3 +70,28 @@ class CodeGenVisitor:
         elif isinstance(node.value, str):
             return self.builder.global_string_ptr(node.value)
 
+    def visit_PrintStmtNode(self, node):
+        var_ptr = self.variables.get(node.identifier)
+        if var_ptr is None:
+            raise Exception(f"Undefined variable: {node.identifier}")
+        var_val = self.builder.load(var_ptr, node.identifier)
+
+        # Declare the printf function
+        voidptr_ty = ir.IntType(8).as_pointer()
+        printf_ty = ir.FunctionType(ir.IntType(32), [voidptr_ty], var_arg=True)
+        printf = ir.Function(self.module, printf_ty, name="printf")
+
+        # Create format string
+        format_str = "%d\n\0"
+        c_format_str = ir.Constant(ir.ArrayType(ir.IntType(8), len(format_str)),
+                                   bytearray(format_str.encode("utf8")))
+        global_format_str = ir.GlobalVariable(self.module, c_format_str.type, name="fstr")
+        global_format_str.linkage = 'internal'
+        global_format_str.global_constant = True
+        global_format_str.initializer = c_format_str
+
+        # Cast the format string to i8*
+        fmt_arg = self.builder.bitcast(global_format_str, voidptr_ty)
+        self.builder.call(printf, [fmt_arg, var_val])
+
+

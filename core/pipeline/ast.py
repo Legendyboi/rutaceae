@@ -9,15 +9,26 @@ class AstBuilder(Transformer):
     def expr(self, items: list[Any]) -> rtc.ExprNode:
         return items[0]
 
+    def print_stmt(self, items: list[Any]) -> rtc.PrintStmtNode:
+        identifier_token = items[2]
+        return rtc.PrintStmtNode(identifier_token.line, identifier_token.column, identifier_token.value)
+
     def value(self, item: Token) -> rtc.ValueNode:
         print("ValAST called")
         if item.type == 'ESCAPED_STRING':
             value = item.value.strip('"')
-        else:
+            return rtc.ValueNode(item.line, item.column, value)
+        elif item.type == 'INT':
             value = int(item.value)
-        return rtc.ValueNode(item.line, item.column, value)
+            return rtc.ValueNode(item.line, item.column, value)
+        elif item.type == 'IDENTIFIER':
+            return rtc.IdentifierExprNode(item.line, item.column, item.value)
+        else:
+            raise TypeError(f"Unexpected token type: {item.type}")
+
 
     def return_stmt(self, items: list[Any]) -> rtc.ReturnStmtNode:
+        print(items)
         expr = items[1]
         if isinstance(expr, Token):
             if expr.type == 'LITERAL':

@@ -15,6 +15,8 @@ program: (func_def | statement)*
 ?value: ESCAPED_STRING
       | INT
 
+!print_stmt: "print" "(" IDENTIFIER ")";
+
 !return_stmt: "return" expr ";"
 !declaration_stmt: "let" (IDENTIFIER)? IDENTIFIER ("=" value )? ";"
 func_def: "fn" IDENTIFIER IDENTIFIER "(" (IDENTIFIER IDENTIFIER)? ("," IDENTIFIER IDENTIFIER)*  ")" block
@@ -22,7 +24,8 @@ func_def: "fn" IDENTIFIER IDENTIFIER "(" (IDENTIFIER IDENTIFIER)? ("," IDENTIFIE
 !expr: LITERAL
      | IDENTIFIER
 
-?statement: declaration_stmt 
+?statement: declaration_stmt
+          | print_stmt
           | return_stmt
 !block: "{" statement* "}"
 

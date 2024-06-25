@@ -31,6 +31,11 @@ class StmtNode(Node):
     def __init__(self, line: int, column: int) -> None:
         super().__init__(line, column)
 
+class PrintStmtNode(StmtNode):
+    def __init__(self, line: int, column: int, identifier: str) -> None:
+        super().__init__(line, column)
+        self.identifier = identifier
+
 class DeclarationStmtNode(StmtNode):
     VALID_TYPES = {"int", "string", "float", "void", "bool"}
 
