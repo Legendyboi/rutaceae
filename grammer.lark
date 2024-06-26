@@ -15,19 +15,51 @@ program: (func_def | statement)*
 ?value: ESCAPED_STRING
       | INT
 
-!print_stmt: "print" "(" IDENTIFIER ")";
+?print_stmt: "print" "(" expr ")";
 
-!return_stmt: "return" expr ";"
-!declaration_stmt: "let" (IDENTIFIER)? IDENTIFIER ("=" value )? ";"
-func_def: "fn" IDENTIFIER IDENTIFIER "(" (IDENTIFIER IDENTIFIER)? ("," IDENTIFIER IDENTIFIER)*  ")" block
+?return_stmt: "return" expr ";"
+?declaration_stmt: "let" (IDENTIFIER)? IDENTIFIER ("=" expr)? ";"
 
-!expr: LITERAL
-     | IDENTIFIER
+func_def: "fn" type_specifier IDENTIFIER "(" (param ("," param)*)? ")" block
+
+type_specifier: "int" | "string" | "float" | "void" | "bool"
+
+param: type_specifier IDENTIFIER
 
 ?statement: declaration_stmt
           | print_stmt
           | return_stmt
-!block: "{" statement* "}"
+          | expr_stmt
 
+?expr_stmt: expr ";"
+
+?expr: expr "||" term  -> or
+     | expr "&&" term  -> and
+     | expr "==" term  -> eq
+     | expr "!=" term  -> neq
+     | expr "<" term   -> lt
+     | expr "<=" term  -> le
+     | expr ">" term   -> gt
+     | expr ">=" term  -> ge
+     | term
+
+?term: term "+" factor -> add
+     | term "-" factor -> sub
+     | factor
+
+?factor: factor "*" unary -> mul
+       | factor "/" unary -> div
+       | factor "%" unary -> mod
+       | unary
+
+?unary: "-" unary      -> neg
+      | "!" unary      -> not
+      | primary
+
+?primary: LITERAL
+        | IDENTIFIER
+        | "(" expr ")"
+
+?block: "{" statement* "}"
 
 %ignore WS
