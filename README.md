@@ -1,4 +1,4 @@
-echo "# Rutaceae Compiler
+# Rutaceae Compiler
 
 A systems programming language with C-like low-level control and high-level ergonomics.
 
