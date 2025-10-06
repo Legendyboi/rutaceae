@@ -47,26 +47,42 @@ class CodeGenVisitor:
         var_ptr = self.variables.get(node.value)
         if var_ptr is None:
             raise Exception(f"Undefined variable: {node.value}")
+
+        # Load the value - for strings this loads the i8* pointer
         return self.builder.load(var_ptr, node.value)
 
     def visit_DeclarationStmtNode(self, node):
-        var_type = (
-            ir.IntType(32) if node.type == "int" else ir.PointerType(ir.IntType(8))
-        )
         var_name = node.identifier
 
-        if var_type == ir.IntType(32):
+        # Visit the initializer to get its value and infer type
+        if node.val is not None:
+            var_val = self.visit(node.val)
+
+            # Infer type from the initializer's LLVM type
+            if var_val.type == ir.IntType(8).as_pointer():
+                # String pointer
+                var_type = ir.IntType(8).as_pointer()
+            else:
+                # Integer or other type
+                var_type = var_val.type
+
+            # Allocate stack space for the variable
             var_ptr = self.builder.alloca(var_type, name=var_name)
             self.variables[var_name] = var_ptr
-            if node.val is not None:
-                var_val = self.visit(node.val)
-                self.builder.store(var_val, var_ptr)
-        elif var_type == ir.PointerType(ir.IntType(8)):
+
+            # Store the initial value
+            self.builder.store(var_val, var_ptr)
+        else:
+            # No initializer - use declared type
+            if node.type == "int":
+                var_type = ir.IntType(32)
+            elif node.type == "string":
+                var_type = ir.IntType(8).as_pointer()
+            else:
+                var_type = ir.IntType(32)  # Default
+
             var_ptr = self.builder.alloca(var_type, name=var_name)
             self.variables[var_name] = var_ptr
-            if node.val is not None:
-                var_val = self.builder.global_string_ptr(node.val.value, name=var_name)
-                self.builder.store(var_val, var_ptr)
 
     def visit_ValueNode(self, node):
         if isinstance(node.value, int):
@@ -104,12 +120,12 @@ class CodeGenVisitor:
             # Doesn't exist, create it
             printf = ir.Function(self.module, printf_ty, name="printf")
 
-        # Determine the format string based on expression type
-        if isinstance(node.expr, ValueNode):
-            # String literal
+        # Determine the format string based on the LOADED VALUE's type, not the node type
+        if expr_val.type == ir.IntType(8).as_pointer():
+            # String pointer (i8*)
             format_str = "%s\n\0"
         else:
-            # Integer (literal or variable)
+            # Integer (i32)
             format_str = "%d\n\0"
 
         # Create format string constant with unique name

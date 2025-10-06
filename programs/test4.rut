@@ -1,0 +1,6 @@
+fn int main() {
+    let x = 0;
+    let message = "Hello, world!";
+    print(message);
+    return x;
+}

@@ -4,15 +4,12 @@ A systems programming language with C-like low-level control and high-level ergo
 
 ## Installation
 
-\`\`\`bash
+```bash
 poetry install
-\`\`\`
+```
 
 ## Usage
 
-\`\`\`bash
+```bash
 poetry run python -m run build programs/test.rut
-\`\`\`
-" > README.md
-
-poetry install
+```
