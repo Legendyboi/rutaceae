@@ -4,20 +4,17 @@
 %import common.INT
 %import common.ESCAPED_STRING
 
-LITERAL: NUMBER 
+LITERAL: NUMBER
 IDENTIFIER: CNAME
-declarator: CNAME
 
 start: program
 
 program: (func_def | statement)*
 
-?value: ESCAPED_STRING
-      | INT
+print_stmt: "print" "(" expr ")" ";"
 
-?print_stmt: "print" "(" expr ")";
+return_stmt: "return" expr ";"
 
-?return_stmt: "return" expr ";"
 ?declaration_stmt: "let" (IDENTIFIER)? IDENTIFIER ("=" expr)? ";"
 
 func_def: "fn" type_specifier IDENTIFIER "(" (param ("," param)*)? ")" block
@@ -57,9 +54,10 @@ param: type_specifier IDENTIFIER
       | primary
 
 ?primary: LITERAL
+        | ESCAPED_STRING         # Added this
         | IDENTIFIER
         | "(" expr ")"
 
-?block: "{" statement* "}"
+block: "{" statement* "}"
 
 %ignore WS

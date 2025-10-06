@@ -2,92 +2,93 @@ from typing import Any
 from lark import Token, Transformer
 import core.pipeline.nodes as rtc
 
+
 class AstBuilder(Transformer):
     def LITERAL(self, item: Token) -> rtc.LiteralExprNode:
         return rtc.LiteralExprNode(item.line, item.column, int(item.value))
 
+    def IDENTIFIER(self, item: Token) -> rtc.IdentifierExprNode:
+        """Transform IDENTIFIER tokens into IdentifierExprNode."""
+        return rtc.IdentifierExprNode(item.line, item.column, item.value)
+
     def expr(self, items: list[Any]) -> rtc.ExprNode:
         return items[0]
 
+    def ESCAPED_STRING(self, item: Token) -> rtc.ValueNode:
+        """Transform ESCAPED_STRING tokens into ValueNode with the string value."""
+        # Strip the surrounding quotes
+        string_value = item.value.strip('"')
+        return rtc.ValueNode(item.line, item.column, string_value)
+
     def print_stmt(self, items: list[Any]) -> rtc.PrintStmtNode:
-        identifier_token = items[2]
-        return rtc.PrintStmtNode(identifier_token.line, identifier_token.column, identifier_token.value)
+        """Transform print_stmt into PrintStmtNode."""
+        # Grammar: "print" "(" expr ")" ";"
+        # After transformation: items = [expr] (keywords filtered out)
+        expr_node = items[0]  # Can be ValueNode, LiteralExprNode, or IdentifierExprNode
 
-    def value(self, item: Token) -> rtc.ValueNode:
-        print("ValAST called")
-        if item.type == 'ESCAPED_STRING':
-            value = item.value.strip('"')
-            return rtc.ValueNode(item.line, item.column, value)
-        elif item.type == 'INT':
-            value = int(item.value)
-            return rtc.ValueNode(item.line, item.column, value)
-        elif item.type == 'IDENTIFIER':
-            return rtc.IdentifierExprNode(item.line, item.column, item.value)
-        else:
-            raise TypeError(f"Unexpected token type: {item.type}")
-
+        return rtc.PrintStmtNode(
+            expr_node.line,
+            expr_node.column,
+            expr_node,  # Pass the whole expression node
+        )
 
     def return_stmt(self, items: list[Any]) -> rtc.ReturnStmtNode:
-        print(items)
-        expr = items[1]
-        if isinstance(expr, Token):
-            if expr.type == 'LITERAL':
-                expr_node = self.LITERAL(expr)
-            elif expr.type == 'IDENTIFIER':
-                expr_node = rtc.IdentifierExprNode(expr.line, expr.column, expr.value)
-            else:
-                raise TypeError(f"Unexpected token type: {expr.type}")
-        else:
-            expr_node = expr
-
+        # items[0] is already transformed to ExprNode (either LiteralExprNode or IdentifierExprNode)
+        expr_node = items[0]
         return rtc.ReturnStmtNode(expr_node.line, expr_node.column, expr_node)
 
-
     def declaration_stmt(self, items: list[Any]) -> rtc.DeclarationStmtNode:
-        print("declarationAST called")
-        
-        # Check if the first item is a type specifier
-        if isinstance(items[0], Token) and items[0].type in {"type_specifier"}:
-            type_token = items[1]
-            name_token = items[2]
-            value_token = items[4] if len(items) > 3 else None
-        else:
-            type_token = None
-            name_token = items[1]
-            value_token = items[3] if len(items) > 2 else None
+        # Grammar: "let" IDENTIFIER ("=" expr)? ";"
+        # After transformation: items = [IdentifierExprNode, expr?]
 
-        # Infer the type from the value if type_token is not provided
-        if type_token is None and value_token is not None:
-            if value_token.type == "ESCAPED_STRING":
-                inferred_type = "string"
-            elif value_token.type == "INT":
+        name_node = items[0]  # Already transformed to IdentifierExprNode
+        name_token_value = name_node.value  # Extract the string value
+
+        # Check if there's an initializer expression
+        if len(items) > 1:
+            value_expr = items[1]  # Already transformed ExprNode
+
+            # Infer type from the value
+            if isinstance(value_expr, rtc.LiteralExprNode):
                 inferred_type = "int"
             else:
-                raise TypeError(f"Unexpected token type: {value_token.type}")
+                inferred_type = "int"  # Default fallback
         else:
-            inferred_type = type_token.value if type_token else "int"  # Default to int if no type and no value
-
-        # Transform the value token to ValueNode
-        val = self.value(value_token) if value_token else None
+            value_expr = None
+            inferred_type = "int"  # Default for uninitialized
 
         return rtc.DeclarationStmtNode(
-            name_token.line, name_token.column, inferred_type, name_token.value, val
+            name_node.line,
+            name_node.column,
+            inferred_type,
+            name_token_value,  # Use the string value, not the node
+            value_expr,
         )
+
+    def type_specifier(self, items: list[Any]) -> str:
+        """Transform type_specifier tree into a string."""
+        return items[0].value if items else "void"
 
     def block(self, items: list[Any]) -> rtc.BlockNode:
-        statements = items[1:-1]
-        return rtc.BlockNode(items[0].line, items[0].column, statements)
+        """Transform block into BlockNode."""
+        statements = items
+        line = statements[0].line if statements else 0
+        column = statements[0].column if statements else 0
+        return rtc.BlockNode(line, column, statements)
 
     def func_def(self, items: list[Any]) -> rtc.FuncDefNode:
-        type_token = items[0]
-        identifier_token = items[1]
-        body = items[2]
+        """Transform func_def into FuncDefNode."""
+        type_value = items[0]  # Already a string from type_specifier
+        identifier_token = items[1]  # Token('IDENTIFIER', 'main')
+        body = items[2]  # BlockNode from block transformer
 
-        funcDefNode = rtc.FuncDefNode(
-            identifier_token.line, identifier_token.column, identifier_token.value, body, type_token.value
+        return rtc.FuncDefNode(
+            identifier_token.line,
+            identifier_token.column,
+            identifier_token.value,
+            body,
+            type_value,
         )
-        
-        return funcDefNode
 
     def program(self, items: list[Any]) -> rtc.ProgramNode:
         return rtc.ProgramNode(0, 0, items)

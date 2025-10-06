@@ -1,20 +1,28 @@
 [tool.poetry]
 name = "rutaceae-compiler"
-version = "0.1.0"
+version = "0.1.5"
 description = "A Compiler made for the Rutaceae Language"
 authors = ["Legendyboi <legendyboi.dev@proton.me>"]
 license = "GPLv3"
 readme = "README.md"
 
+packages = [
+    { include = "core" }
+]
+
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.13"
 lark = "^1.1.9"
 rich = "^13.7.1"
-llvmlite = "^0.42.0"
+llvmlite = "^0.45.0"
 typer = "^0.12.3"
+pydot = "^4.0.1"
 
 [tool.poetry.group.dev.dependencies]
 lark = "^1.1.9"
+
+[tool.poetry.scripts]
+rutaceae = "run:main"
 
 [build-system]
 requires = ["poetry-core"]

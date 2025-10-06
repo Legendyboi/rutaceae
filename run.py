@@ -11,6 +11,7 @@ import llvmlite.binding as llvm
 
 app = typer.Typer()
 
+
 @app.command(help="Compiles a Rutaceae program and creates an executable.")
 def build(input_file: Path, output_file: Path = Path("output")):
     print("-----------------")
@@ -32,10 +33,9 @@ def build(input_file: Path, output_file: Path = Path("output")):
     llvm_ir = codegen_visitor.visit(ast)
     print(llvm_ir)
 
-    # Initialize LLVM
-    llvm.initialize()
-    llvm.initialize_native_target()
-    llvm.initialize_native_asmprinter()
+    # Initialize LLVM targets
+    llvm.initialize_all_targets()
+    llvm.initialize_all_asmprinters()
 
     # Compile LLVM IR to object file
     target = llvm.Target.from_default_triple()
@@ -55,6 +55,7 @@ def build(input_file: Path, output_file: Path = Path("output")):
     executable = str(output_file)
     subprocess.run(["gcc", obj_file, "-o", executable], check=True)
     print(f"Executable {executable} created successfully.")
+
 
 @app.command(help="Compiles and runs a Rutaceae program with a lot of debug info.")
 def run(input_file: Path):
@@ -77,10 +78,9 @@ def run(input_file: Path):
     llvm_ir = codegen_visitor.visit(ast)
     print(llvm_ir)
 
-    # Initialize LLVM
-    llvm.initialize()
-    llvm.initialize_native_target()
-    llvm.initialize_native_asmprinter()
+    # Initialize LLVM targets
+    llvm.initialize_all_targets()
+    llvm.initialize_all_asmprinters()
 
     # Compile LLVM IR to machine code
     target = llvm.Target.from_default_triple()
@@ -101,8 +101,10 @@ def run(input_file: Path):
         result = main_func()
         print(f"Program result: {result}")
 
+
 def main():
     app()
+
 
 if __name__ == "__main__":
     app()

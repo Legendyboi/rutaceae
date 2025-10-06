@@ -1,5 +1,7 @@
 import llvmlite.ir as ir
 import llvmlite.binding as llvm
+from core.pipeline.nodes import ValueNode
+
 
 class CodeGenVisitor:
     def __init__(self):
@@ -9,12 +11,12 @@ class CodeGenVisitor:
         self.variables = {}
 
     def visit(self, node):
-        method_name = 'visit_' + node.__class__.__name__
+        method_name = "visit_" + node.__class__.__name__
         visitor = getattr(self, method_name, self.generic_visit)
         return visitor(node)
 
     def generic_visit(self, node):
-        raise Exception(f'No visit_{node.__class__.__name__} method')
+        raise Exception(f"No visit_{node.__class__.__name__} method")
 
     def visit_ProgramNode(self, node):
         for func_def in node.func_defs:
@@ -48,7 +50,9 @@ class CodeGenVisitor:
         return self.builder.load(var_ptr, node.value)
 
     def visit_DeclarationStmtNode(self, node):
-        var_type = ir.IntType(32) if node.type == "int" else ir.PointerType(ir.IntType(8))
+        var_type = (
+            ir.IntType(32) if node.type == "int" else ir.PointerType(ir.IntType(8))
+        )
         var_name = node.identifier
 
         if var_type == ir.IntType(32):
@@ -68,93 +72,63 @@ class CodeGenVisitor:
         if isinstance(node.value, int):
             return ir.Constant(ir.IntType(32), node.value)
         elif isinstance(node.value, str):
-            return self.builder.global_string_ptr(node.value)
+            # Create a global string constant
+            string_bytes = bytearray((node.value + "\0").encode("utf8"))
+            string_const = ir.Constant(
+                ir.ArrayType(ir.IntType(8), len(string_bytes)), string_bytes
+            )
+
+            # Create global variable for the string
+            global_str = ir.GlobalVariable(
+                self.module, string_const.type, name=f".str.{len(self.module.globals)}"
+            )
+            global_str.linkage = "internal"
+            global_str.global_constant = True
+            global_str.initializer = string_const
+
+            # Return pointer to the first element
+            return self.builder.bitcast(global_str, ir.IntType(8).as_pointer())
 
     def visit_PrintStmtNode(self, node):
-        if isinstance(node.identifier, int):
-            print("its int!")
-            print(node.identifier)
+        # Visit the expression to get its value
+        expr_val = self.visit(node.expr)
 
-            int_val = ir.Constant(ir.IntType(32), node.identifier)
+        # Declare the printf function (or get existing)
+        voidptr_ty = ir.IntType(8).as_pointer()
+        printf_ty = ir.FunctionType(ir.IntType(32), [voidptr_ty], var_arg=True)
 
-            # Declare the printf function
-            voidptr_ty = ir.IntType(8).as_pointer()
-            printf_ty = ir.FunctionType(ir.IntType(32), [voidptr_ty], var_arg=True)
+        # Check if printf already exists in the module
+        try:
+            printf = self.module.get_global("printf")
+        except KeyError:
+            # Doesn't exist, create it
             printf = ir.Function(self.module, printf_ty, name="printf")
 
-            # Create format string
-            format_str = "%d\n\0"
-            c_format_str = ir.Constant(ir.ArrayType(ir.IntType(8), len(format_str)),
-                                    bytearray(format_str.encode("utf8")))
-            global_format_str = ir.GlobalVariable(self.module, c_format_str.type, name="fstr")
-            global_format_str.linkage = 'internal'
-            global_format_str.global_constant = True
-            global_format_str.initializer = c_format_str
-
-            # Cast the format string to i8*
-            fmt_arg = self.builder.bitcast(global_format_str, voidptr_ty)
-            self.builder.call(printf, [fmt_arg, int_val])
-
-        elif '"' in node.identifier and isinstance(node.identifier, str):
-            print("its str!")
-            print(f"Heres the String Value Obtained: {node.identifier}")
-            string_val = node.identifier.strip("\"")
-            print(f"Heres the String Value after Strip: {string_val}")
-
-            string_val += "\0"
-            c_str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(string_val)),
-                                    bytearray(string_val.encode("utf8")))
-            print(f"c_str_val: {c_str_val}")
-
-            # Declare the printf function
-            voidptr_ty = ir.IntType(8).as_pointer()
-            printf_ty = ir.FunctionType(ir.IntType(32), [voidptr_ty], var_arg=True)
-            printf = ir.Function(self.module, printf_ty, name="printf")
-
-            c_str = self.builder.alloca(c_str_val.type)
-            self.builder.store(c_str_val, c_str)
-            print(f"c_str: {c_str}")
-
-            # Create format string
+        # Determine the format string based on expression type
+        if isinstance(node.expr, ValueNode):
+            # String literal
             format_str = "%s\n\0"
-            c_format_str = ir.Constant(ir.ArrayType(ir.IntType(8), len(format_str)),
-                                    bytearray(format_str.encode("utf8")))
-            print(f"c_format_str: {c_format_str}")
-            global_format_str = ir.GlobalVariable(self.module, c_format_str.type, name="fstr")
-            global_format_str.linkage = 'internal'
-            global_format_str.global_constant = True
-            global_format_str.initializer = c_format_str
-
-            fmt_arg = self.builder.bitcast(global_format_str, voidptr_ty)
-            print(fmt_arg)
-            self.builder.call(printf, [fmt_arg, c_str])
-            
-
         else:
-            var_ptr = self.variables.get(node.identifier)
-            print(f"identifier: {node.identifier}")
-            print(f"heres the var_ptr: {var_ptr}")
-            if var_ptr is None:
-                raise Exception(f"Undefined variable: {node.identifier}")
-            var_val = self.builder.load(var_ptr, node.identifier)
-            print(f"heres the var_val: {var_val}")
-
-            # Declare the printf function
-            voidptr_ty = ir.IntType(8).as_pointer()
-            printf_ty = ir.FunctionType(ir.IntType(32), [voidptr_ty], var_arg=True)
-            printf = ir.Function(self.module, printf_ty, name="printf")
-
-            # Create format string
+            # Integer (literal or variable)
             format_str = "%d\n\0"
-            c_format_str = ir.Constant(ir.ArrayType(ir.IntType(8), len(format_str)),
-                                    bytearray(format_str.encode("utf8")))
-            global_format_str = ir.GlobalVariable(self.module, c_format_str.type, name="fstr")
-            global_format_str.linkage = 'internal'
-            global_format_str.global_constant = True
-            global_format_str.initializer = c_format_str
 
-            # Cast the format string to i8*
-            fmt_arg = self.builder.bitcast(global_format_str, voidptr_ty)
-            self.builder.call(printf, [fmt_arg, var_val])
+        # Create format string constant with unique name
+        c_format_str = ir.Constant(
+            ir.ArrayType(ir.IntType(8), len(format_str)),
+            bytearray(format_str.encode("utf8")),
+        )
 
+        # Use unique name based on number of globals
+        fmt_name = f".fstr.{len(self.module.globals)}"
+        global_format_str = ir.GlobalVariable(
+            self.module, c_format_str.type, name=fmt_name
+        )
+        global_format_str.linkage = "internal"
+        global_format_str.global_constant = True
+        global_format_str.initializer = c_format_str
 
+        # Get pointer to format string
+        fmt_arg = self.builder.bitcast(global_format_str, voidptr_ty)
+
+        # Call printf
+        self.builder.call(printf, [fmt_arg, expr_val])

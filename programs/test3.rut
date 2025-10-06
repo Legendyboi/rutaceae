@@ -1,5 +1,6 @@
 fn int main() {
     let x = 103;
-    print("WHERE THE FUCK ARE THESE INVISIBLE CHARACTERS COMING FROM BRO ISTFG:");
+    print("Muahahaha! Print Statements go brrr!");
+    print(x);
     return 0;
 }
