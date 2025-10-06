@@ -51,6 +51,62 @@ class CodeGenVisitor:
         # Load the value - for strings this loads the i8* pointer
         return self.builder.load(var_ptr, node.value)
 
+    def visit_BinaryOpNode(self, node):
+        """Generate LLVM IR for binary operations"""
+        # Visit left and right operands
+        left_val = self.visit(node.left)
+        right_val = self.visit(node.right)
+
+        # Arithmetic operations
+        if node.op == "+":
+            return self.builder.add(left_val, right_val, "addtmp")
+        elif node.op == "-":
+            return self.builder.sub(left_val, right_val, "subtmp")
+        elif node.op == "*":
+            return self.builder.mul(left_val, right_val, "multmp")
+        elif node.op == "/":
+            return self.builder.sdiv(left_val, right_val, "divtmp")
+        elif node.op == "%":
+            return self.builder.srem(left_val, right_val, "modtmp")
+
+        # Comparison operations (return i1 boolean)
+        elif node.op == "==":
+            return self.builder.icmp_signed("==", left_val, right_val, "eqtmp")
+        elif node.op == "!=":
+            return self.builder.icmp_signed("!=", left_val, right_val, "neqtmp")
+        elif node.op == "<":
+            return self.builder.icmp_signed("<", left_val, right_val, "lttmp")
+        elif node.op == "<=":
+            return self.builder.icmp_signed("<=", left_val, right_val, "letmp")
+        elif node.op == ">":
+            return self.builder.icmp_signed(">", left_val, right_val, "gttmp")
+        elif node.op == ">=":
+            return self.builder.icmp_signed(">=", left_val, right_val, "getmp")
+
+        # Logical operations (already i1 booleans)
+        elif node.op == "&&":
+            return self.builder.and_(left_val, right_val, "andtmp")
+        elif node.op == "||":
+            return self.builder.or_(left_val, right_val, "ortmp")
+
+        else:
+            raise Exception(f"Unknown binary operator: {node.op}")
+
+    def visit_UnaryOpNode(self, node):
+        """Generate LLVM IR for unary operations"""
+        operand_val = self.visit(node.operand)
+
+        if node.op == "-":
+            # Negation: 0 - operand
+            zero = ir.Constant(ir.IntType(32), 0)
+            return self.builder.sub(zero, operand_val, "negtmp")
+        elif node.op == "!":
+            # Logical not: xor operand with 1 (assuming i1 boolean)
+            one = ir.Constant(ir.IntType(1), 1)
+            return self.builder.xor(operand_val, one, "nottmp")
+        else:
+            raise Exception(f"Unknown unary operator: {node.op}")
+
     def visit_DeclarationStmtNode(self, node):
         var_name = node.identifier
 

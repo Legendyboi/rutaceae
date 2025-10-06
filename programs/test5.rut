@@ -1,0 +1,27 @@
+fn int main() {
+    let x = 10;
+    let y = 20;
+    let sum = x + y;
+    print(sum);
+
+    let product = x * y;
+    print(product);
+
+    let diff = y - x;
+    print(diff);
+
+    let quotient = y / x;
+    print(quotient);
+
+    let remainder = x % y;
+    print(remainder);
+
+    print("----------\nIn Print Statements\n----------");
+
+    print(x + y);      // Should print 30
+    print(x * y);      // Should print 200
+    print(y - x);      // Should print 10
+    print((x + y) * 2); // Should print 60
+
+    return 0;
+}

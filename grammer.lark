@@ -4,6 +4,12 @@
 %import common.INT
 %import common.ESCAPED_STRING
 
+COMMENT: "//" /[^\n]*/
+MULTILINE_COMMENT: "/*" /(.|\n)*?/ "*/"
+
+%ignore COMMENT
+%ignore MULTILINE_COMMENT
+
 LITERAL: NUMBER
 IDENTIFIER: CNAME
 

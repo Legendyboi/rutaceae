@@ -33,6 +33,28 @@ class IdentifierExprNode(ExprNode):
         self.value = value
 
 
+class BinaryOpNode(ExprNode):
+    def __init__(
+        self, line: int, column: int, op: str, left: ExprNode, right: ExprNode
+    ) -> None:
+        super().__init__(line, column)
+        self.op = (
+            op  # '+', '-', '*', '/', '%', '==', '!=', '<', '>', '<=', '>=', '&&', '||'
+        )
+        assert isinstance(left, ExprNode)
+        assert isinstance(right, ExprNode)
+        self.left = left
+        self.right = right
+
+
+class UnaryOpNode(ExprNode):
+    def __init__(self, line: int, column: int, op: str, operand: ExprNode) -> None:
+        super().__init__(line, column)
+        self.op = op  # '-', '!'
+        assert isinstance(operand, ExprNode)
+        self.operand = operand
+
+
 class StmtNode(Node):
     def __init__(self, line: int, column: int) -> None:
         super().__init__(line, column)

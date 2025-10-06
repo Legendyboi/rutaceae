@@ -1,6 +1,7 @@
 from typing import Any
 from lark import Token, Transformer
 import core.pipeline.nodes as rtc
+import ast
 
 
 class AstBuilder(Transformer):
@@ -14,10 +15,90 @@ class AstBuilder(Transformer):
     def expr(self, items: list[Any]) -> rtc.ExprNode:
         return items[0]
 
+    # Binary operators - arithmetic
+    def add(self, items: list[Any]) -> rtc.BinaryOpNode:
+        """Transform addition: term + factor"""
+        left, right = items
+        return rtc.BinaryOpNode(left.line, left.column, "+", left, right)
+
+    def sub(self, items: list[Any]) -> rtc.BinaryOpNode:
+        """Transform subtraction: term - factor"""
+        left, right = items
+        return rtc.BinaryOpNode(left.line, left.column, "-", left, right)
+
+    def mul(self, items: list[Any]) -> rtc.BinaryOpNode:
+        """Transform multiplication: factor * unary"""
+        left, right = items
+        return rtc.BinaryOpNode(left.line, left.column, "*", left, right)
+
+    def div(self, items: list[Any]) -> rtc.BinaryOpNode:
+        """Transform division: factor / unary"""
+        left, right = items
+        return rtc.BinaryOpNode(left.line, left.column, "/", left, right)
+
+    def mod(self, items: list[Any]) -> rtc.BinaryOpNode:
+        """Transform modulo: factor % unary"""
+        left, right = items
+        return rtc.BinaryOpNode(left.line, left.column, "%", left, right)
+
+    # Binary operators - comparison
+    def eq(self, items: list[Any]) -> rtc.BinaryOpNode:
+        """Transform equality: expr == term"""
+        left, right = items
+        return rtc.BinaryOpNode(left.line, left.column, "==", left, right)
+
+    def neq(self, items: list[Any]) -> rtc.BinaryOpNode:
+        """Transform not equal: expr != term"""
+        left, right = items
+        return rtc.BinaryOpNode(left.line, left.column, "!=", left, right)
+
+    def lt(self, items: list[Any]) -> rtc.BinaryOpNode:
+        """Transform less than: expr < term"""
+        left, right = items
+        return rtc.BinaryOpNode(left.line, left.column, "<", left, right)
+
+    def le(self, items: list[Any]) -> rtc.BinaryOpNode:
+        """Transform less than or equal: expr <= term"""
+        left, right = items
+        return rtc.BinaryOpNode(left.line, left.column, "<=", left, right)
+
+    def gt(self, items: list[Any]) -> rtc.BinaryOpNode:
+        """Transform greater than: expr > term"""
+        left, right = items
+        return rtc.BinaryOpNode(left.line, left.column, ">", left, right)
+
+    def ge(self, items: list[Any]) -> rtc.BinaryOpNode:
+        """Transform greater than or equal: expr >= term"""
+        left, right = items
+        return rtc.BinaryOpNode(left.line, left.column, ">=", left, right)
+
+    # Binary operators - logical
+    def and_(self, items: list[Any]) -> rtc.BinaryOpNode:
+        """Transform logical and: expr && term"""
+        left, right = items
+        return rtc.BinaryOpNode(left.line, left.column, "&&", left, right)
+
+    def or_(self, items: list[Any]) -> rtc.BinaryOpNode:
+        """Transform logical or: expr || term"""
+        left, right = items
+        return rtc.BinaryOpNode(left.line, left.column, "||", left, right)
+
+    # Unary operators
+    def neg(self, items: list[Any]) -> rtc.UnaryOpNode:
+        """Transform negation: -unary"""
+        operand = items[0]
+        return rtc.UnaryOpNode(operand.line, operand.column, "-", operand)
+
+    def not_(self, items: list[Any]) -> rtc.UnaryOpNode:
+        """Transform logical not: !unary"""
+        operand = items[0]
+        return rtc.UnaryOpNode(operand.line, operand.column, "!", operand)
+
     def ESCAPED_STRING(self, item: Token) -> rtc.ValueNode:
-        """Transform ESCAPED_STRING tokens into ValueNode with the string value."""
-        # Strip the surrounding quotes
-        string_value = item.value.strip('"')
+        """Transform ESCAPED_STRING tokens into ValueNode with proper escape sequences."""
+
+        # Use ast.literal_eval to properly decode escape sequences like \n, \t, \", etc.
+        string_value = ast.literal_eval(item.value)
         return rtc.ValueNode(item.line, item.column, string_value)
 
     def print_stmt(self, items: list[Any]) -> rtc.PrintStmtNode:
