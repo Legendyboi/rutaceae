@@ -10,6 +10,9 @@ MULTILINE_COMMENT: "/*" /(.|\n)*?/ "*/"
 %ignore COMMENT
 %ignore MULTILINE_COMMENT
 
+TRUE.2: "true"
+FALSE.2: "false"
+
 LITERAL: NUMBER
 IDENTIFIER: CNAME
 
@@ -60,8 +63,10 @@ param: type_specifier IDENTIFIER
       | primary
 
 ?primary: LITERAL
-        | ESCAPED_STRING         # Added this
+        | ESCAPED_STRING
         | IDENTIFIER
+        | TRUE
+        | FALSE
         | "(" expr ")"
 
 block: "{" statement* "}"

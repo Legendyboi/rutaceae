@@ -101,6 +101,14 @@ class AstBuilder(Transformer):
         string_value = ast.literal_eval(item.value)
         return rtc.ValueNode(item.line, item.column, string_value)
 
+    def TRUE(self, item: Token) -> rtc.ValueNode:
+        """Transform TRUE token into ValueNode with boolean value."""
+        return rtc.ValueNode(item.line, item.column, True)
+
+    def FALSE(self, item: Token) -> rtc.ValueNode:
+        """Transform FALSE token into ValueNode with boolean value."""
+        return rtc.ValueNode(item.line, item.column, False)
+
     def print_stmt(self, items: list[Any]) -> rtc.PrintStmtNode:
         """Transform print_stmt into PrintStmtNode."""
         # Grammar: "print" "(" expr ")" ";"

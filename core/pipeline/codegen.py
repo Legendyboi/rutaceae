@@ -115,12 +115,19 @@ class CodeGenVisitor:
             var_val = self.visit(node.val)
 
             # Infer type from the initializer's LLVM type
-            if var_val.type == ir.IntType(8).as_pointer():
+            # CHECK ORDER MATTERS: bool before int because bool IS int in Python!
+            if var_val.type == ir.IntType(1):
+                # Boolean (i1)
+                var_type = ir.IntType(1)
+            elif var_val.type == ir.IntType(8).as_pointer():
                 # String pointer
                 var_type = ir.IntType(8).as_pointer()
+            elif var_val.type == ir.IntType(32):
+                # Integer
+                var_type = ir.IntType(32)
             else:
-                # Integer or other type
-                var_type = var_val.type
+                # Default to i32
+                var_type = ir.IntType(32)
 
             # Allocate stack space for the variable
             var_ptr = self.builder.alloca(var_type, name=var_name)
@@ -134,6 +141,8 @@ class CodeGenVisitor:
                 var_type = ir.IntType(32)
             elif node.type == "string":
                 var_type = ir.IntType(8).as_pointer()
+            elif node.type == "bool":
+                var_type = ir.IntType(1)
             else:
                 var_type = ir.IntType(32)  # Default
 
@@ -141,16 +150,20 @@ class CodeGenVisitor:
             self.variables[var_name] = var_ptr
 
     def visit_ValueNode(self, node):
-        if isinstance(node.value, int):
+        # CHECK BOOL BEFORE INT! (bool is subclass of int in Python)
+        if isinstance(node.value, bool):
+            # Boolean: i1 type (1 bit integer)
+            return ir.Constant(ir.IntType(1), int(node.value))
+        elif isinstance(node.value, int):
+            # Integer: i32 type
             return ir.Constant(ir.IntType(32), node.value)
         elif isinstance(node.value, str):
-            # Create a global string constant
+            # String: create global constant and return pointer
             string_bytes = bytearray((node.value + "\0").encode("utf8"))
             string_const = ir.Constant(
                 ir.ArrayType(ir.IntType(8), len(string_bytes)), string_bytes
             )
 
-            # Create global variable for the string
             global_str = ir.GlobalVariable(
                 self.module, string_const.type, name=f".str.{len(self.module.globals)}"
             )
@@ -158,7 +171,6 @@ class CodeGenVisitor:
             global_str.global_constant = True
             global_str.initializer = string_const
 
-            # Return pointer to the first element
             return self.builder.bitcast(global_str, ir.IntType(8).as_pointer())
 
     def visit_PrintStmtNode(self, node):
@@ -176,12 +188,19 @@ class CodeGenVisitor:
             # Doesn't exist, create it
             printf = ir.Function(self.module, printf_ty, name="printf")
 
-        # Determine the format string based on the LOADED VALUE's type, not the node type
+        # Determine the format string based on the LOADED VALUE's type
+        # MOVED OUTSIDE the try-except block so it runs EVERY time!
         if expr_val.type == ir.IntType(8).as_pointer():
             # String pointer (i8*)
             format_str = "%s\n\0"
-        else:
+        elif expr_val.type == ir.IntType(1):
+            # Boolean (i1) - print as integer
+            format_str = "%d\n\0"
+        elif expr_val.type == ir.IntType(32):
             # Integer (i32)
+            format_str = "%d\n\0"
+        else:
+            # Default fallback
             format_str = "%d\n\0"
 
         # Create format string constant with unique name
