@@ -13,7 +13,9 @@ MULTILINE_COMMENT: "/*" /(.|\n)*?/ "*/"
 TRUE.2: "true"
 FALSE.2: "false"
 
-LITERAL: NUMBER
+FLOAT_LITERAL: /[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?/
+
+LITERAL: INT
 IDENTIFIER: CNAME
 
 start: program
@@ -63,6 +65,7 @@ param: type_specifier IDENTIFIER
       | primary
 
 ?primary: LITERAL
+        | FLOAT_LITERAL
         | ESCAPED_STRING
         | IDENTIFIER
         | TRUE

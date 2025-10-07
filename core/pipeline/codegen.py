@@ -57,31 +57,78 @@ class CodeGenVisitor:
         left_val = self.visit(node.left)
         right_val = self.visit(node.right)
 
+        # Check if either operand is a float
+        is_float = left_val.type == ir.DoubleType() or right_val.type == ir.DoubleType()
+
         # Arithmetic operations
         if node.op == "+":
-            return self.builder.add(left_val, right_val, "addtmp")
+            return (
+                self.builder.fadd(left_val, right_val, "addtmp")
+                if is_float
+                else self.builder.add(left_val, right_val, "addtmp")
+            )
         elif node.op == "-":
-            return self.builder.sub(left_val, right_val, "subtmp")
+            return (
+                self.builder.fsub(left_val, right_val, "subtmp")
+                if is_float
+                else self.builder.sub(left_val, right_val, "subtmp")
+            )
         elif node.op == "*":
-            return self.builder.mul(left_val, right_val, "multmp")
+            return (
+                self.builder.fmul(left_val, right_val, "multmp")
+                if is_float
+                else self.builder.mul(left_val, right_val, "multmp")
+            )
         elif node.op == "/":
-            return self.builder.sdiv(left_val, right_val, "divtmp")
+            return (
+                self.builder.fdiv(left_val, right_val, "divtmp")
+                if is_float
+                else self.builder.sdiv(left_val, right_val, "divtmp")
+            )
         elif node.op == "%":
-            return self.builder.srem(left_val, right_val, "modtmp")
+            return (
+                self.builder.frem(left_val, right_val, "modtmp")
+                if is_float
+                else self.builder.srem(left_val, right_val, "modtmp")
+            )
 
         # Comparison operations (return i1 boolean)
         elif node.op == "==":
-            return self.builder.icmp_signed("==", left_val, right_val, "eqtmp")
+            return (
+                self.builder.fcmp_ordered("==", left_val, right_val, "eqtmp")
+                if is_float
+                else self.builder.icmp_signed("==", left_val, right_val, "eqtmp")
+            )
         elif node.op == "!=":
-            return self.builder.icmp_signed("!=", left_val, right_val, "neqtmp")
+            return (
+                self.builder.fcmp_ordered("!=", left_val, right_val, "neqtmp")
+                if is_float
+                else self.builder.icmp_signed("!=", left_val, right_val, "neqtmp")
+            )
         elif node.op == "<":
-            return self.builder.icmp_signed("<", left_val, right_val, "lttmp")
+            return (
+                self.builder.fcmp_ordered("<", left_val, right_val, "lttmp")
+                if is_float
+                else self.builder.icmp_signed("<", left_val, right_val, "lttmp")
+            )
         elif node.op == "<=":
-            return self.builder.icmp_signed("<=", left_val, right_val, "letmp")
+            return (
+                self.builder.fcmp_ordered("<=", left_val, right_val, "letmp")
+                if is_float
+                else self.builder.icmp_signed("<=", left_val, right_val, "letmp")
+            )
         elif node.op == ">":
-            return self.builder.icmp_signed(">", left_val, right_val, "gttmp")
+            return (
+                self.builder.fcmp_ordered(">", left_val, right_val, "gttmp")
+                if is_float
+                else self.builder.icmp_signed(">", left_val, right_val, "gttmp")
+            )
         elif node.op == ">=":
-            return self.builder.icmp_signed(">=", left_val, right_val, "getmp")
+            return (
+                self.builder.fcmp_ordered(">=", left_val, right_val, "getmp")
+                if is_float
+                else self.builder.icmp_signed(">=", left_val, right_val, "getmp")
+            )
 
         # Logical operations (already i1 booleans)
         elif node.op == "&&":
@@ -119,6 +166,9 @@ class CodeGenVisitor:
             if var_val.type == ir.IntType(1):
                 # Boolean (i1)
                 var_type = ir.IntType(1)
+            elif var_val.type == ir.DoubleType():
+                # Float (double)
+                var_type = ir.DoubleType()
             elif var_val.type == ir.IntType(8).as_pointer():
                 # String pointer
                 var_type = ir.IntType(8).as_pointer()
@@ -139,6 +189,8 @@ class CodeGenVisitor:
             # No initializer - use declared type
             if node.type == "int":
                 var_type = ir.IntType(32)
+            elif node.type == "float":
+                var_type = ir.DoubleType()
             elif node.type == "string":
                 var_type = ir.IntType(8).as_pointer()
             elif node.type == "bool":
@@ -154,6 +206,9 @@ class CodeGenVisitor:
         if isinstance(node.value, bool):
             # Boolean: i1 type (1 bit integer)
             return ir.Constant(ir.IntType(1), int(node.value))
+        elif isinstance(node.value, float):
+            # Float: double type (64-bit floating point)
+            return ir.Constant(ir.DoubleType(), node.value)
         elif isinstance(node.value, int):
             # Integer: i32 type
             return ir.Constant(ir.IntType(32), node.value)
@@ -199,6 +254,9 @@ class CodeGenVisitor:
         elif expr_val.type == ir.IntType(32):
             # Integer (i32)
             format_str = "%d\n\0"
+        elif expr_val.type == ir.DoubleType():
+            # For Float (double)
+            format_str = "%f\n\0"
         else:
             # Default fallback
             format_str = "%d\n\0"

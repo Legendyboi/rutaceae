@@ -1,0 +1,11 @@
+fn int main() {
+    let pi = 3.14159;
+    let radius = 5.0;
+    let area = pi * radius * radius;
+    print(area);        // Should print: 78.539750
+
+    let x = 10.5 + 2.3;
+    print(x);           // Should print: 12.800000
+
+    return 0;
+}

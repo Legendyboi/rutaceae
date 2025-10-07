@@ -15,6 +15,10 @@ class AstBuilder(Transformer):
     def expr(self, items: list[Any]) -> rtc.ExprNode:
         return items[0]
 
+    def FLOAT_LITERAL(self, item: Token) -> rtc.ValueNode:
+        """Transform FLOAT_LITERAL token into ValueNode with float value."""
+        return rtc.ValueNode(item.line, item.column, float(item.value))
+
     # Binary operators - arithmetic
     def add(self, items: list[Any]) -> rtc.BinaryOpNode:
         """Transform addition: term + factor"""
