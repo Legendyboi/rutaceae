@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+
+# Compiler output
+*.o
+*.obj
+output
+a.out
+
+# Parse tree visualizations
+programs/treePng/
+programs/*.png
+*.png
+
+# Poetry
+poetry.lock
