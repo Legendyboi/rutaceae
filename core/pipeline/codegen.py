@@ -201,6 +201,19 @@ class CodeGenVisitor:
             var_ptr = self.builder.alloca(var_type, name=var_name)
             self.variables[var_name] = var_ptr
 
+    def visit_AssignmentStmtNode(self, node):
+        """Generate LLVM IR for variable assignment."""
+        # Look up the variable in the symbol table
+        var_ptr = self.variables.get(node.identifier)
+        if var_ptr is None:
+            raise Exception(f"Assignment to undefined variable: {node.identifier}")
+
+        # Evaluate the new value
+        new_val = self.visit(node.expr)
+
+        # Store the new value at the variable's pointer
+        self.builder.store(new_val, var_ptr)
+
     def visit_ValueNode(self, node):
         # CHECK BOOL BEFORE INT! (bool is subclass of int in Python)
         if isinstance(node.value, bool):

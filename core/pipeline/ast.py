@@ -158,6 +158,20 @@ class AstBuilder(Transformer):
             value_expr,
         )
 
+    def assignment_stmt(self, items: list[Any]) -> rtc.AssignmentStmtNode:
+        """Transform assignment_stmt into AssignmentStmtNode."""
+        # Grammar: IDENTIFIER "=" expr ";"
+        # After transformation: items = [identifier_token, expr_node]
+        identifier_token = items[0]
+        expr_node = items[1]
+
+        return rtc.AssignmentStmtNode(
+            identifier_token.line,
+            identifier_token.column,
+            identifier_token.value,
+            expr_node,
+        )
+
     def type_specifier(self, items: list[Any]) -> str:
         """Transform type_specifier tree into a string."""
         return items[0].value if items else "void"

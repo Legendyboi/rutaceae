@@ -1,0 +1,24 @@
+fn int main() {
+    let x = 10;
+    print(x);       // Should print: 10
+
+    x = 20;
+    print(x);       // Should print: 20
+
+    x = x + 5;
+    print(x);       // Should print: 25
+
+    let y = 3.14;
+    print(y);       // Should print: 3.140000
+
+    y = y * 2.0;
+    print(y);       // Should print: 6.280000
+
+    let flag = true;
+    print(flag);    // Should print: 1
+
+    flag = false;
+    print(flag);    // Should print: 0
+
+    return 0;
+}

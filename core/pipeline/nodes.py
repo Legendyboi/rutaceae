@@ -91,6 +91,14 @@ class DeclarationStmtNode(StmtNode):
         self.val = val
 
 
+class AssignmentStmtNode(StmtNode):
+    def __init__(self, line: int, column: int, identifier: str, expr: ExprNode) -> None:
+        super().__init__(line, column)
+        self.identifier = identifier
+        assert isinstance(expr, ExprNode)
+        self.expr = expr
+
+
 class ReturnStmtNode(StmtNode):
     def __init__(self, line: int, column: int, expr: ExprNode) -> None:
         super().__init__(line, column)
