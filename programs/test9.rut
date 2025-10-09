@@ -1,0 +1,23 @@
+fn int main() {
+    // Explicit type annotations
+    let x: int = 10;
+    print(x);
+
+    let pi: float = 3.14;
+    print(pi);
+
+    let flag: bool = true;
+    print(flag);
+
+    let name: string = "Alice";
+    print(name);
+
+    // Type inference still works
+    let y = 20;
+    print(y);
+
+    let z = 2.71;
+    print(z);
+
+    return 0;
+}

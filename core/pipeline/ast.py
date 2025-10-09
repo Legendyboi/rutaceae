@@ -131,30 +131,54 @@ class AstBuilder(Transformer):
         return rtc.ReturnStmtNode(expr_node.line, expr_node.column, expr_node)
 
     def declaration_stmt(self, items: list[Any]) -> rtc.DeclarationStmtNode:
-        # Grammar: "let" IDENTIFIER ("=" expr)? ";"
-        # After transformation: items = [IdentifierExprNode, expr?]
+        """Transform declaration_stmt into DeclarationStmtNode."""
+        # Grammar: "let" IDENTIFIER (":" type_specifier)? ("=" expr)? ";"
+        # Possible patterns:
+        #   [IdentifierExprNode]                          -> let x;
+        #   [IdentifierExprNode, type_str]                -> let x: int;
+        #   [IdentifierExprNode, expr]                    -> let x = 10;
+        #   [IdentifierExprNode, type_str, expr]          -> let x: int = 10;
 
-        name_node = items[0]  # Already transformed to IdentifierExprNode
-        name_token_value = name_node.value  # Extract the string value
+        name_node = items[0]  # IdentifierExprNode
+        name_token_value = name_node.value
 
-        # Check if there's an initializer expression
-        if len(items) > 1:
-            value_expr = items[1]  # Already transformed ExprNode
+        type_spec = None
+        value_expr = None
 
-            # Infer type from the value
-            if isinstance(value_expr, rtc.LiteralExprNode):
-                inferred_type = "int"
+        # Parse based on number of items
+        if len(items) == 1:
+            # let x;
+            type_spec = "int"  # Default type
+        elif len(items) == 2:
+            # Either "let x: int;" or "let x = 10;"
+            if isinstance(items[1], str):
+                # Type annotation: let x: int;
+                type_spec = items[1]
             else:
-                inferred_type = "int"  # Default fallback
-        else:
-            value_expr = None
-            inferred_type = "int"  # Default for uninitialized
+                # Expression: let x = 10;
+                value_expr = items[1]
+                # Infer type from expression
+                if isinstance(value_expr, rtc.ValueNode):
+                    if isinstance(value_expr.value, bool):
+                        type_spec = "bool"
+                    elif isinstance(value_expr.value, float):
+                        type_spec = "float"
+                    elif isinstance(value_expr.value, str):
+                        type_spec = "string"
+                    else:
+                        type_spec = "int"
+                else:
+                    type_spec = "int"  # Default
+        elif len(items) == 3:
+            # let x: int = 10;
+            type_spec = items[1]  # Type string
+            value_expr = items[2]  # Expression
 
         return rtc.DeclarationStmtNode(
             name_node.line,
             name_node.column,
-            inferred_type,
-            name_token_value,  # Use the string value, not the node
+            type_spec,
+            name_token_value,
             value_expr,
         )
 
