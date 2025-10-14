@@ -36,10 +36,13 @@ param: type_specifier IDENTIFIER
 
 assignment_stmt: IDENTIFIER "=" expr ";"
 
+if_stmt: "if" "(" expr ")" block ("else" block)?
+
 ?statement: declaration_stmt
           | assignment_stmt
           | print_stmt
           | return_stmt
+          | if_stmt
           | expr_stmt
 
 ?expr_stmt: expr ";"

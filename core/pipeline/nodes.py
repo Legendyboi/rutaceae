@@ -113,6 +113,26 @@ class BlockNode(Node):
         self.stmts = stmts
 
 
+class IfStmtNode(StmtNode):
+    def __init__(
+        self,
+        line: int,
+        column: int,
+        condition: ExprNode,
+        then_block: BlockNode,
+        else_block: BlockNode | None = None,
+    ) -> None:
+        super().__init__(line, column)
+        assert isinstance(condition, ExprNode)
+        assert isinstance(then_block, BlockNode)
+        if else_block is not None:
+            assert isinstance(else_block, BlockNode)
+
+        self.condition = condition
+        self.then_block = then_block
+        self.else_block = else_block
+
+
 class FuncDefNode(Node):
     VALID_TYPES = {"int", "string", "float", "void", "bool"}
 

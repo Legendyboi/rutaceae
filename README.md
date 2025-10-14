@@ -198,7 +198,7 @@ fn int main() {
 - [x] **0.2.5** - CLI refactor with verbose/PNG flags
 
 ### 🚧 Version 0.3.x - Control Flow (IN PROGRESS)
-- [ ] **0.3.0** - If/else statements
+- [x] **0.3.0** - If/else statements
 - [ ] **0.3.1** - While loops
 - [ ] **0.3.2** - For loops
 - [ ] **0.3.3** - Break/continue statements

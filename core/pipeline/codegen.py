@@ -214,6 +214,45 @@ class CodeGenVisitor:
         # Store the new value at the variable's pointer
         self.builder.store(new_val, var_ptr)
 
+    def visit_IfStmtNode(self, node):
+        """Generate LLVM IR for if/else statement using basic blocks"""
+        # Evaluate condition
+        condition_val = self.visit(node.condition)
+
+        # Convert condition to i1 (boolean) if it's not already
+        if condition_val.type != ir.IntType(1):
+            condition_val = self.builder.icmp_signed(
+                "!=", condition_val, ir.Constant(condition_val.type, 0)
+            )
+
+        # Create basic blocks
+        then_block = self.builder.append_basic_block("if.then")
+        merge_block = self.builder.append_basic_block("if.merge")
+
+        if node.else_block:
+            else_block = self.builder.append_basic_block("if.else")
+            self.builder.cbranch(condition_val, then_block, else_block)
+        else:
+            self.builder.cbranch(condition_val, then_block, merge_block)
+
+        # Generate 'then' block
+        self.builder.position_at_end(then_block)
+        self.visit(node.then_block)
+        # Only branch if block doesn't already have a terminator (return statement)
+        if not self.builder.block.is_terminated:
+            self.builder.branch(merge_block)
+
+        # Generate 'else' block if present
+        if node.else_block:
+            self.builder.position_at_end(else_block)
+            self.visit(node.else_block)
+            # Only branch if block doesn't already have a terminator
+            if not self.builder.block.is_terminated:
+                self.builder.branch(merge_block)
+
+        # Continue at merge block
+        self.builder.position_at_end(merge_block)
+
     def visit_ValueNode(self, node):
         # CHECK BOOL BEFORE INT! (bool is subclass of int in Python)
         if isinstance(node.value, bool):

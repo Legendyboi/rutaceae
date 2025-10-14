@@ -196,6 +196,23 @@ class AstBuilder(Transformer):
             expr_node,
         )
 
+    def if_stmt(self, items: list[Any]) -> rtc.IfStmtNode:
+        """Transform if statement into IfStmtNode."""
+        # Grammar: "if" "(" expr ")" block ("else" block)?
+        # items = [condition_expr, then_block] or [condition_expr, then_block, else_block]
+
+        condition = items[0]  # ExprNode
+        then_block = items[1]  # BlockNode
+        else_block = items[2] if len(items) > 2 else None  # Optional BlockNode
+
+        return rtc.IfStmtNode(
+            condition.line,
+            condition.column,
+            condition,
+            then_block,
+            else_block,
+        )
+
     def type_specifier(self, items: list[Any]) -> str:
         """Transform type_specifier tree into a string."""
         return items[0].value if items else "void"

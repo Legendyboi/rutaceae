@@ -1,0 +1,12 @@
+// Testing If Statement with else clause
+fn int main() {
+    let x = 10;
+
+    if (x > 5) {
+        print(999);
+    } else {
+        print(0);
+    }
+
+    return 0;
+}

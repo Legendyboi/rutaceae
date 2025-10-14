@@ -1,0 +1,16 @@
+// Testing nested If Statement with else clause
+fn int main() {
+    let x = 10;
+
+    if (x > 5) {
+        if (x > 8) {
+            print(888);
+        } else {
+            print(777);
+        }
+    } else {
+        print(0);
+    }
+
+    return 0;
+}
