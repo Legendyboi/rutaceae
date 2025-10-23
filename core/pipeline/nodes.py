@@ -149,6 +149,29 @@ class WhileStmtNode(StmtNode):
         self.body = body
 
 
+class ForStmtNode(StmtNode):
+    def __init__(
+        self,
+        line: int,
+        column: int,
+        init: StmtNode | None,  # Initialization (let i = 0; or i = 0;)
+        condition: ExprNode,  # Loop condition (i < 10)
+        update: StmtNode,  # Update statement (i = i + 1)
+        body: BlockNode,  # Loop body
+    ) -> None:
+        super().__init__(line, column)
+        if init is not None:
+            assert isinstance(init, StmtNode)
+        assert isinstance(condition, ExprNode)
+        assert isinstance(update, StmtNode)
+        assert isinstance(body, BlockNode)
+
+        self.init = init
+        self.condition = condition
+        self.update = update
+        self.body = body
+
+
 class FuncDefNode(Node):
     VALID_TYPES = {"int", "string", "float", "void", "bool"}
 

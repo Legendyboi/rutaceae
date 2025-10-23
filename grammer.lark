@@ -40,12 +40,22 @@ if_stmt: "if" "(" expr ")" block ("else" block)?
 
 while_stmt: "while" "(" expr ")" block
 
+for_update: IDENTIFIER "=" expr
+
+for_init: declaration_stmt
+        | assignment_stmt
+        | ";"
+
+for_stmt: "for" "(" for_init expr ";" for_update ")" block
+
+
 ?statement: declaration_stmt
           | assignment_stmt
           | print_stmt
           | return_stmt
           | if_stmt
           | while_stmt
+          | for_stmt
           | expr_stmt
 
 ?expr_stmt: expr ";"

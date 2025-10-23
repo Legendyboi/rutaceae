@@ -1,0 +1,7 @@
+fn int main() {
+    let count = 10;
+    for (count = 0; count < 3; count = count + 1) {
+        print(count);
+    }
+    return 0;
+}

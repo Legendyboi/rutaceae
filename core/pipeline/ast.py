@@ -228,6 +228,46 @@ class AstBuilder(Transformer):
             body,
         )
 
+    def for_update(self, items: list[Any]) -> rtc.AssignmentStmtNode:
+        """Transform for_update into AssignmentStmtNode (without semicolon)."""
+        identifier_token = items[0]
+        expr_node = items[1]
+
+        return rtc.AssignmentStmtNode(
+            identifier_token.line,
+            identifier_token.column,
+            identifier_token.value,
+            expr_node,
+        )
+
+    def for_init(self, items: list[Any]) -> rtc.StmtNode | None:
+        """Transform for_init into a statement or None for empty init."""
+        if len(items) == 0:
+            # Empty initialization - just semicolon
+            return None
+        else:
+            # Return the statement (declaration or assignment)
+            return items[0]
+
+    def for_stmt(self, items: list[Any]) -> rtc.ForStmtNode:
+        """Transform for statement into ForStmtNode."""
+        # Grammar: "for" "(" for_init expr ";" assignment_stmt ")" block
+        # items = [init_stmt_or_none, condition_expr, update_stmt, body_block]
+
+        init_stmt = items[0]  # Can be None from for_init
+        condition = items[1]  # ExprNode
+        update = items[2]  # StmtNode (assignment)
+        body = items[3]  # BlockNode
+
+        return rtc.ForStmtNode(
+            condition.line,
+            condition.column,
+            init_stmt,
+            condition,
+            update,
+            body,
+        )
+
     def type_specifier(self, items: list[Any]) -> str:
         """Transform type_specifier tree into a string."""
         return items[0].value if items else "void"

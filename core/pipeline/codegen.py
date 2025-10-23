@@ -288,6 +288,54 @@ class CodeGenVisitor:
         # Continue at exit block
         self.builder.position_at_end(loop_exit)
 
+    def visit_ForStmtNode(self, node):
+        """Generate LLVM IR for for loop using basic blocks"""
+
+        # Execute initialization statement if present
+        if node.init is not None:
+            self.visit(node.init)
+
+        # Create basic blocks
+        loop_condition = self.builder.append_basic_block("for.condition")
+        loop_body = self.builder.append_basic_block("for.body")
+        loop_update = self.builder.append_basic_block("for.update")
+        loop_exit = self.builder.append_basic_block("for.exit")
+
+        # Jump to condition check
+        self.builder.branch(loop_condition)
+
+        # Generate condition block
+        self.builder.position_at_end(loop_condition)
+        condition_val = self.visit(node.condition)
+
+        # Convert condition to i1 (boolean) if it's not already
+        if condition_val.type != ir.IntType(1):
+            condition_val = self.builder.icmp_signed(
+                "!=", condition_val, ir.Constant(condition_val.type, 0)
+            )
+
+        # Branch based on condition: if true -> body, if false -> exit
+        self.builder.cbranch(condition_val, loop_body, loop_exit)
+
+        # Generate body block
+        self.builder.position_at_end(loop_body)
+        self.visit(node.body)
+
+        # Jump to update block (only if no terminator like return)
+        if not self.builder.block.is_terminated:
+            self.builder.branch(loop_update)
+
+        # Generate update block
+        self.builder.position_at_end(loop_update)
+        self.visit(node.update)
+
+        # Jump back to condition check
+        if not self.builder.block.is_terminated:
+            self.builder.branch(loop_condition)
+
+        # Continue at exit block
+        self.builder.position_at_end(loop_exit)
+
     def visit_ValueNode(self, node):
         # CHECK BOOL BEFORE INT! (bool is subclass of int in Python)
         if isinstance(node.value, bool):

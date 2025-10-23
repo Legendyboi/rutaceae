@@ -199,8 +199,8 @@ fn int main() {
 
 ### 🚧 Version 0.3.x - Control Flow (IN PROGRESS)
 - [x] **0.3.0** - If/else statements
-- [ ] **0.3.1** - While loops
-- [ ] **0.3.2** - For loops
+- [x] **0.3.1** - While loops
+- [x] **0.3.2** - For loops
 - [ ] **0.3.3** - Break/continue statements
 - [ ] **0.3.4** - Nested control flow
 
