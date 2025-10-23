@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "rutaceae-compiler"
-version = "0.3.4"
+version = "0.3.5"
 description = "A Compiler made for the Rutaceae Language"
 authors = ["Legendyboi <legendyboi.dev@proton.me>"]
 license = "GPLv3"

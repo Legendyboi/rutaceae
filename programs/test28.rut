@@ -1,0 +1,22 @@
+fn int main() {
+    let intVal = 10;
+    let floatVal = 3.5;
+
+    print("Integer:", intVal);
+    print("Float:", floatVal);
+
+    // Mixed type operations (should auto-promote)
+    let result1 = intVal + floatVal;  // int + float -> float
+    let result2 = floatVal * intVal;  // float * int -> float
+
+    print("Mixed operations:");
+    print(intVal, "+", floatVal, "=", result1);
+    print(floatVal, "*", intVal, "=", result2);
+
+    // Comparisons with type promotion
+    if (intVal == 10.0) {
+        print("Type promotion in comparison works!");
+    }
+
+    return 0;
+}

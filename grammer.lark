@@ -22,11 +22,14 @@ start: program
 
 program: (func_def | statement)*
 
-print_stmt: "print" "(" expr ")" ";"
+print_stmt: "print" "(" expr ("," expr)* ")" ";"
 
 return_stmt: "return" expr ";"
 
-?declaration_stmt: "let" IDENTIFIER (":" type_specifier)? ("=" expr)? ";"
+let_stmt: "let" IDENTIFIER (":" type_specifier)? ("=" expr)? ";"
+const_stmt: "const" IDENTIFIER (":" type_specifier)? "=" expr ";"
+
+?declaration_stmt: let_stmt | const_stmt
 
 func_def: "fn" type_specifier IDENTIFIER "(" (param ("," param)*)? ")" block
 
@@ -51,8 +54,20 @@ for_stmt: "for" "(" for_init expr ";" for_update ")" block
 break_stmt: "break" ";"
 continue_stmt: "continue" ";"
 
+increment_stmt: IDENTIFIER "++" ";"
+decrement_stmt: IDENTIFIER "--" ";"
+
+PLUS_ASSIGN: "+="
+MINUS_ASSIGN: "-="
+MULT_ASSIGN: "*="
+DIV_ASSIGN: "/="
+MOD_ASSIGN: "%="
+
+compound_assign_stmt: IDENTIFIER (PLUS_ASSIGN | MINUS_ASSIGN | MULT_ASSIGN | DIV_ASSIGN | MOD_ASSIGN) expr ";"
+
 ?statement: declaration_stmt
           | assignment_stmt
+          | compound_assign_stmt
           | print_stmt
           | return_stmt
           | if_stmt
@@ -60,6 +75,8 @@ continue_stmt: "continue" ";"
           | for_stmt
           | break_stmt
           | continue_stmt
+          | increment_stmt
+          | decrement_stmt
           | expr_stmt
 
 ?expr_stmt: expr ";"

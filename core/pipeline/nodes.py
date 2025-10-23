@@ -61,15 +61,31 @@ class StmtNode(Node):
 
 
 class PrintStmtNode(StmtNode):
-    def __init__(self, line: int, column: int, expr: ExprNode) -> None:
+    def __init__(self, line: int, column: int, expr: ExprNode | list[ExprNode]) -> None:
         super().__init__(line, column)
-        assert isinstance(expr, ExprNode)
-        self.expr = expr
+
+        if isinstance(expr, list):
+            # Multiple expressions
+            assert all([isinstance(e, ExprNode) for e in expr])
+            self.expressions = expr
+        else:
+            # Single expression (backward compatibility)
+            assert isinstance(expr, ExprNode)
+            self.expressions = [expr]
+
+        # Maintain backward compatibility: keep .expr for single expression
+        self.expr = self.expressions[0]
 
 
 class DeclarationStmtNode(StmtNode):
     def __init__(
-        self, line: int, column: int, type: str, identifier: str, val: ExprNode | None
+        self,
+        line: int,
+        column: int,
+        type: str,
+        identifier: str,
+        val: ExprNode | None,
+        is_const: bool = False,
     ) -> None:
         super().__init__(line, column)
 
@@ -84,11 +100,18 @@ class DeclarationStmtNode(StmtNode):
             )
         self.identifier = identifier
 
-        if val is not None and not isinstance(val, ExprNode):  # Changed from ValueNode
+        if val is not None and not isinstance(val, ExprNode):
             raise TypeError(
                 f"Expected val to be ExprNode or None, got {val.__class__.__name__}"
             )
         self.val = val
+
+        # Add const tracking
+        self.is_const = is_const
+
+        # Const variables must have an initializer
+        if is_const and val is None:
+            raise ValueError(f"Const variable '{identifier}' must be initialized")
 
 
 class AssignmentStmtNode(StmtNode):
@@ -170,6 +193,47 @@ class ForStmtNode(StmtNode):
         self.condition = condition
         self.update = update
         self.body = body
+
+
+class IncrementStmtNode(StmtNode):
+    def __init__(self, line: int, column: int, identifier: str) -> None:
+        super().__init__(line, column)
+        if not isinstance(identifier, str):
+            raise TypeError(
+                f"Expected identifier to be a str, got {identifier.__class__.__name__}"
+            )
+        self.identifier = identifier
+
+
+class DecrementStmtNode(StmtNode):
+    def __init__(self, line: int, column: int, identifier: str) -> None:
+        super().__init__(line, column)
+        if not isinstance(identifier, str):
+            raise TypeError(
+                f"Expected identifier to be a str, got {identifier.__class__.__name__}"
+            )
+        self.identifier = identifier
+
+
+class CompoundAssignStmtNode(StmtNode):
+    def __init__(
+        self, line: int, column: int, identifier: str, operator: str, expr: ExprNode
+    ) -> None:
+        super().__init__(line, column)
+        if not isinstance(identifier, str):
+            raise TypeError(
+                f"Expected identifier to be a str, got {identifier.__class__.__name__}"
+            )
+
+        valid_operators = {"+=", "-=", "*=", "/=", "%="}
+        if operator not in valid_operators:
+            raise ValueError(f"Invalid compound operator: {operator}")
+
+        assert isinstance(expr, ExprNode)
+
+        self.identifier = identifier
+        self.operator = operator
+        self.expr = expr
 
 
 class BreakStmtNode(StmtNode):

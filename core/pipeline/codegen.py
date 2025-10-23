@@ -9,6 +9,7 @@ class CodeGenVisitor:
         self.builder = None
         self.func = None
         self.variables = {}
+        self.const_variables = set()
         self.loop_stack = []
 
     def visit(self, node):
@@ -52,11 +53,49 @@ class CodeGenVisitor:
         # Load the value - for strings this loads the i8* pointer
         return self.builder.load(var_ptr, node.value)
 
+    def _get_type_name(self, llvm_type):
+        """Helper to get human-readable type names."""
+        if llvm_type == ir.IntType(32):
+            return "int"
+        elif llvm_type == ir.DoubleType():
+            return "float"
+        elif llvm_type == ir.IntType(1):
+            return "bool"
+        elif llvm_type == ir.IntType(8).as_pointer():
+            return "string"
+        else:
+            return str(llvm_type)
+
     def visit_BinaryOpNode(self, node):
         """Generate LLVM IR for binary operations"""
         # Visit left and right operands
         left_val = self.visit(node.left)
         right_val = self.visit(node.right)
+
+        if left_val.type != right_val.type:
+            if left_val.type == ir.IntType(32) and right_val.type == ir.DoubleType():
+                # Promote int to float
+                left_val = self.builder.sitofp(
+                    left_val, ir.DoubleType(), "int_to_float"
+                )
+            elif left_val.type == ir.DoubleType() and right_val.type == ir.IntType(32):
+                # Promote int to float
+                right_val = self.builder.sitofp(
+                    right_val, ir.DoubleType(), "int_to_float"
+                )
+            elif left_val.type == ir.IntType(1) and right_val.type == ir.IntType(32):
+                # Promote bool to int for arithmetic
+                left_val = self.builder.zext(left_val, ir.IntType(32), "bool_to_int")
+            elif left_val.type == ir.IntType(32) and right_val.type == ir.IntType(1):
+                # Promote bool to int for arithmetic
+                right_val = self.builder.zext(right_val, ir.IntType(32), "bool_to_int")
+            else:
+                # Incompatible types - clear error message
+                left_type_name = self._get_type_name(left_val.type)
+                right_type_name = self._get_type_name(right_val.type)
+                raise Exception(
+                    f"Type mismatch in binary operation: {left_type_name} {node.op} {right_type_name}"
+                )
 
         # Check if either operand is a float
         is_float = left_val.type == ir.DoubleType() or right_val.type == ir.DoubleType()
@@ -158,6 +197,9 @@ class CodeGenVisitor:
     def visit_DeclarationStmtNode(self, node):
         var_name = node.identifier
 
+        if var_name in self.variables:
+            raise Exception(f"Variable '{var_name}' is already declared in this scope")
+
         # Visit the initializer to get its value and infer type
         if node.val is not None:
             var_val = self.visit(node.val)
@@ -186,6 +228,9 @@ class CodeGenVisitor:
 
             # Store the initial value
             self.builder.store(var_val, var_ptr)
+
+            if node.is_const:
+                self.const_variables.add(var_name)
         else:
             # No initializer - use declared type
             if node.type == "int":
@@ -204,6 +249,10 @@ class CodeGenVisitor:
 
     def visit_AssignmentStmtNode(self, node):
         """Generate LLVM IR for variable assignment."""
+
+        if node.identifier in self.const_variables:
+            raise Exception(f"Cannot assign to const variable: {node.identifier}")
+
         # Look up the variable in the symbol table
         var_ptr = self.variables.get(node.identifier)
         if var_ptr is None:
@@ -376,6 +425,110 @@ class CodeGenVisitor:
 
             return self.builder.bitcast(global_str, ir.IntType(8).as_pointer())
 
+    def visit_IncrementStmtNode(self, node):
+        """Generate LLVM IR for increment statement (x++)"""
+        # Check if trying to increment const variable
+        if node.identifier in self.const_variables:
+            raise Exception(f"Cannot increment const variable: {node.identifier}")
+
+        # Look up the variable
+        var_ptr = self.variables.get(node.identifier)
+        if var_ptr is None:
+            raise Exception(f"Increment of undefined variable: {node.identifier}")
+
+        # Load current value, add 1, store back
+        current_val = self.builder.load(var_ptr, node.identifier)
+        one = ir.Constant(current_val.type, 1)
+
+        # Handle different types
+        if current_val.type == ir.DoubleType():
+            new_val = self.builder.fadd(current_val, one, "inc")
+        else:
+            new_val = self.builder.add(current_val, one, "inc")
+
+        self.builder.store(new_val, var_ptr)
+
+    def visit_DecrementStmtNode(self, node):
+        """Generate LLVM IR for decrement statement (x--)"""
+        # Check if trying to decrement const variable
+        if node.identifier in self.const_variables:
+            raise Exception(f"Cannot decrement const variable: {node.identifier}")
+
+        # Look up the variable
+        var_ptr = self.variables.get(node.identifier)
+        if var_ptr is None:
+            raise Exception(f"Decrement of undefined variable: {node.identifier}")
+
+        # Load current value, subtract 1, store back
+        current_val = self.builder.load(var_ptr, node.identifier)
+        one = ir.Constant(current_val.type, 1)
+
+        # Handle different types
+        if current_val.type == ir.DoubleType():
+            new_val = self.builder.fsub(current_val, one, "dec")
+        else:
+            new_val = self.builder.sub(current_val, one, "dec")
+
+        self.builder.store(new_val, var_ptr)
+
+    def visit_CompoundAssignStmtNode(self, node):
+        """Generate LLVM IR for compound assignment (x += y)"""
+        # Check if trying to assign to const variable
+        if node.identifier in self.const_variables:
+            raise Exception(f"Cannot assign to const variable: {node.identifier}")
+
+        # Look up the variable
+        var_ptr = self.variables.get(node.identifier)
+        if var_ptr is None:
+            raise Exception(
+                f"Compound assignment to undefined variable: {node.identifier}"
+            )
+
+        # Load current value and evaluate RHS expression
+        current_val = self.builder.load(var_ptr, node.identifier)
+        rhs_val = self.visit(node.expr)
+
+        # Perform the operation based on operator
+        is_float = (
+            current_val.type == ir.DoubleType() or rhs_val.type == ir.DoubleType()
+        )
+
+        if node.operator == "+=":
+            new_val = (
+                self.builder.fadd(current_val, rhs_val, "add_assign")
+                if is_float
+                else self.builder.add(current_val, rhs_val, "add_assign")
+            )
+        elif node.operator == "-=":
+            new_val = (
+                self.builder.fsub(current_val, rhs_val, "sub_assign")
+                if is_float
+                else self.builder.sub(current_val, rhs_val, "sub_assign")
+            )
+        elif node.operator == "*=":
+            new_val = (
+                self.builder.fmul(current_val, rhs_val, "mul_assign")
+                if is_float
+                else self.builder.mul(current_val, rhs_val, "mul_assign")
+            )
+        elif node.operator == "/=":
+            new_val = (
+                self.builder.fdiv(current_val, rhs_val, "div_assign")
+                if is_float
+                else self.builder.sdiv(current_val, rhs_val, "div_assign")
+            )
+        elif node.operator == "%=":
+            new_val = (
+                self.builder.frem(current_val, rhs_val, "mod_assign")
+                if is_float
+                else self.builder.srem(current_val, rhs_val, "mod_assign")
+            )
+        else:
+            raise Exception(f"Unknown compound operator: {node.operator}")
+
+        # Store the result
+        self.builder.store(new_val, var_ptr)
+
     def visit_BreakStmtNode(self, node):
         """Generate LLVM IR for break statement"""
         if not self.loop_stack:
@@ -399,55 +552,99 @@ class CodeGenVisitor:
         self.builder.branch(continue_block)
 
     def visit_PrintStmtNode(self, node):
-        # Visit the expression to get its value
-        expr_val = self.visit(node.expr)
+        """Enhanced print statement supporting multiple expressions."""
 
-        # Declare the printf function (or get existing)
-        voidptr_ty = ir.IntType(8).as_pointer()
-        printf_ty = ir.FunctionType(ir.IntType(32), [voidptr_ty], var_arg=True)
+        # If it's just one expression, use the existing implementation
+        if len(node.expressions) == 1:
+            # Use your exact existing implementation
+            expr_val = self.visit(node.expr)
 
-        # Check if printf already exists in the module
-        try:
-            printf = self.module.get_global("printf")
-        except KeyError:
-            # Doesn't exist, create it
-            printf = ir.Function(self.module, printf_ty, name="printf")
+            # Declare the printf function (or get existing)
+            voidptr_ty = ir.IntType(8).as_pointer()
+            printf_ty = ir.FunctionType(ir.IntType(32), [voidptr_ty], var_arg=True)
 
-        # Determine the format string based on the LOADED VALUE's type
-        # MOVED OUTSIDE the try-except block so it runs EVERY time!
-        if expr_val.type == ir.IntType(8).as_pointer():
-            # String pointer (i8*)
-            format_str = "%s\n\0"
-        elif expr_val.type == ir.IntType(1):
-            # Boolean (i1) - print as integer
-            format_str = "%d\n\0"
-        elif expr_val.type == ir.IntType(32):
-            # Integer (i32)
-            format_str = "%d\n\0"
-        elif expr_val.type == ir.DoubleType():
-            # For Float (double)
-            format_str = "%f\n\0"
+            # Check if printf already exists in the module
+            try:
+                printf = self.module.get_global("printf")
+            except KeyError:
+                # Doesn't exist, create it
+                printf = ir.Function(self.module, printf_ty, name="printf")
+
+            # Determine the format string based on the LOADED VALUE's type
+            if expr_val.type == ir.IntType(8).as_pointer():
+                format_str = "%s\n\0"
+            elif expr_val.type == ir.IntType(1):
+                format_str = "%d\n\0"
+            elif expr_val.type == ir.IntType(32):
+                format_str = "%d\n\0"
+            elif expr_val.type == ir.DoubleType():
+                format_str = "%f\n\0"
+            else:
+                format_str = "%d\n\0"
+
+            # Create format string constant with unique name
+            c_format_str = ir.Constant(
+                ir.ArrayType(ir.IntType(8), len(format_str)),
+                bytearray(format_str.encode("utf8")),
+            )
+
+            fmt_name = f".fstr.{len(self.module.globals)}"
+            global_format_str = ir.GlobalVariable(
+                self.module, c_format_str.type, name=fmt_name
+            )
+            global_format_str.linkage = "internal"
+            global_format_str.global_constant = True
+            global_format_str.initializer = c_format_str
+
+            fmt_arg = self.builder.bitcast(global_format_str, voidptr_ty)
+            self.builder.call(printf, [fmt_arg, expr_val])
+
         else:
-            # Default fallback
-            format_str = "%d\n\0"
+            # Multiple expressions - print them space-separated on one line
+            # Setup printf function (same as above)
+            voidptr_ty = ir.IntType(8).as_pointer()
+            printf_ty = ir.FunctionType(ir.IntType(32), [voidptr_ty], var_arg=True)
 
-        # Create format string constant with unique name
-        c_format_str = ir.Constant(
-            ir.ArrayType(ir.IntType(8), len(format_str)),
-            bytearray(format_str.encode("utf8")),
-        )
+            try:
+                printf = self.module.get_global("printf")
+            except KeyError:
+                printf = ir.Function(self.module, printf_ty, name="printf")
 
-        # Use unique name based on number of globals
-        fmt_name = f".fstr.{len(self.module.globals)}"
-        global_format_str = ir.GlobalVariable(
-            self.module, c_format_str.type, name=fmt_name
-        )
-        global_format_str.linkage = "internal"
-        global_format_str.global_constant = True
-        global_format_str.initializer = c_format_str
+            # Print each expression with space separator
+            for i, expr in enumerate(node.expressions):
+                expr_val = self.visit(expr)
 
-        # Get pointer to format string
-        fmt_arg = self.builder.bitcast(global_format_str, voidptr_ty)
+                # Determine format string
+                if expr_val.type == ir.IntType(8).as_pointer():
+                    base_format = "%s"
+                elif expr_val.type == ir.IntType(1):
+                    base_format = "%d"
+                elif expr_val.type == ir.IntType(32):
+                    base_format = "%d"
+                elif expr_val.type == ir.DoubleType():
+                    base_format = "%f"
+                else:
+                    base_format = "%d"
 
-        # Call printf
-        self.builder.call(printf, [fmt_arg, expr_val])
+                # Add separator or newline
+                if i == len(node.expressions) - 1:
+                    format_str = base_format + "\n\0"  # Last expression gets newline
+                else:
+                    format_str = base_format + " \0"  # Others get space
+
+                # Create and use format string (same pattern as your existing code)
+                c_format_str = ir.Constant(
+                    ir.ArrayType(ir.IntType(8), len(format_str)),
+                    bytearray(format_str.encode("utf8")),
+                )
+
+                fmt_name = f".fstr.{len(self.module.globals)}"
+                global_format_str = ir.GlobalVariable(
+                    self.module, c_format_str.type, name=fmt_name
+                )
+                global_format_str.linkage = "internal"
+                global_format_str.global_constant = True
+                global_format_str.initializer = c_format_str
+
+                fmt_arg = self.builder.bitcast(global_format_str, voidptr_ty)
+                self.builder.call(printf, [fmt_arg, expr_val])

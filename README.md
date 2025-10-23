@@ -197,13 +197,13 @@ fn int main() {
 - [x] **0.2.4** - Type annotations
 - [x] **0.2.5** - CLI refactor with verbose/PNG flags
 
-### 🚧 Version 0.3.x - Control Flow (IN PROGRESS)
+### 🚧 Version 0.3.x - Control Flow and Improvements (COMPLETE)
 - [x] **0.3.0** - If/else statements
 - [x] **0.3.1** - While loops
 - [x] **0.3.2** - For loops
 - [x] **0.3.3** - Break/continue statements
 - [x] **0.3.4** - Nested control flow
-- [ ] **0.3.5** - Language ergonomics & immutability
+- [x] **0.3.5** - Language ergonomics, immutability & other additions
 
 ### 🔮 Version 0.4.x - Functions & Scope
 - [ ] **0.4.0** - Function definitions with parameters

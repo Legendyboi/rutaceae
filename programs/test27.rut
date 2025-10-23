@@ -1,0 +1,7 @@
+fn int main() {
+    let x = 10;
+    let y = 20;
+    print(x);        // Works exactly like before: "10\n"
+    print(x, y);     // New: "10 20\n"
+    return 0;
+}

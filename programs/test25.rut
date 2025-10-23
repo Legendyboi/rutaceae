@@ -1,0 +1,10 @@
+fn int main() {
+    const PI = 3.14159;
+    let radius = 5;
+    print(PI);
+    print(radius);
+    radius = 12;
+    print(PI);
+    print(radius);
+    return 0;
+}

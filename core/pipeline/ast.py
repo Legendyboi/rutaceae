@@ -115,29 +115,25 @@ class AstBuilder(Transformer):
 
     def print_stmt(self, items: list[Any]) -> rtc.PrintStmtNode:
         """Transform print_stmt into PrintStmtNode."""
-        # Grammar: "print" "(" expr ")" ";"
-        # After transformation: items = [expr] (keywords filtered out)
-        expr_node = items[0]  # Can be ValueNode, LiteralExprNode, or IdentifierExprNode
+        # Grammar: "print" "(" expr ("," expr)* ")" ";"
+        # items = [expr1, expr2, expr3, ...] (list of expressions)
 
-        return rtc.PrintStmtNode(
-            expr_node.line,
-            expr_node.column,
-            expr_node,  # Pass the whole expression node
-        )
+        if len(items) == 1:
+            # Single expression - use existing node structure
+            return rtc.PrintStmtNode(items[0].line, items[0].column, items[0])
+        else:
+            # Multiple expressions
+            return rtc.PrintStmtNode(items[0].line, items[0].column, items)
 
     def return_stmt(self, items: list[Any]) -> rtc.ReturnStmtNode:
         # items[0] is already transformed to ExprNode (either LiteralExprNode or IdentifierExprNode)
         expr_node = items[0]
         return rtc.ReturnStmtNode(expr_node.line, expr_node.column, expr_node)
 
-    def declaration_stmt(self, items: list[Any]) -> rtc.DeclarationStmtNode:
-        """Transform declaration_stmt into DeclarationStmtNode."""
+    def let_stmt(self, items: list[Any]) -> rtc.DeclarationStmtNode:
+        """Transform let_stmt into DeclarationStmtNode."""
         # Grammar: "let" IDENTIFIER (":" type_specifier)? ("=" expr)? ";"
-        # Possible patterns:
-        #   [IdentifierExprNode]                          -> let x;
-        #   [IdentifierExprNode, type_str]                -> let x: int;
-        #   [IdentifierExprNode, expr]                    -> let x = 10;
-        #   [IdentifierExprNode, type_str, expr]          -> let x: int = 10;
+        # This is your existing logic, just copied over
 
         name_node = items[0]  # IdentifierExprNode
         name_token_value = name_node.value
@@ -180,6 +176,46 @@ class AstBuilder(Transformer):
             type_spec,
             name_token_value,
             value_expr,
+            is_const=False,  # let variables are mutable
+        )
+
+    def const_stmt(self, items: list[Any]) -> rtc.DeclarationStmtNode:
+        """Transform const_stmt into DeclarationStmtNode."""
+        # Grammar: "const" IDENTIFIER (":" type_specifier)? "=" expr ";"
+        # Const must always have an initializer
+
+        name_node = items[0]  # IdentifierExprNode
+        name_token_value = name_node.value
+
+        if len(items) == 2:
+            # const x = 10;
+            value_expr = items[1]
+            # Infer type from expression
+            if isinstance(value_expr, rtc.ValueNode):
+                if isinstance(value_expr.value, bool):
+                    type_spec = "bool"
+                elif isinstance(value_expr.value, float):
+                    type_spec = "float"
+                elif isinstance(value_expr.value, str):
+                    type_spec = "string"
+                else:
+                    type_spec = "int"
+            else:
+                type_spec = "int"  # Default
+        elif len(items) == 3:
+            # const x: int = 10;
+            type_spec = items[1]  # Type string
+            value_expr = items[2]  # Expression
+        else:
+            raise ValueError("Const declaration must have an initializer")
+
+        return rtc.DeclarationStmtNode(
+            name_node.line,
+            name_node.column,
+            type_spec,
+            name_token_value,
+            value_expr,
+            is_const=True,  # const variables are immutable
         )
 
     def assignment_stmt(self, items: list[Any]) -> rtc.AssignmentStmtNode:
@@ -266,6 +302,39 @@ class AstBuilder(Transformer):
             condition,
             update,
             body,
+        )
+
+    def increment_stmt(self, items: list[Any]) -> rtc.IncrementStmtNode:
+        """Transform increment statement into IncrementStmtNode."""
+        # Grammar: IDENTIFIER "++" ";"
+        identifier_token = items[0]
+        return rtc.IncrementStmtNode(
+            identifier_token.line, identifier_token.column, identifier_token.value
+        )
+
+    def decrement_stmt(self, items: list[Any]) -> rtc.DecrementStmtNode:
+        """Transform decrement statement into DecrementStmtNode."""
+        # Grammar: IDENTIFIER "--" ";"
+        identifier_token = items[0]
+        return rtc.DecrementStmtNode(
+            identifier_token.line, identifier_token.column, identifier_token.value
+        )
+
+    def compound_assign_stmt(self, items: list[Any]) -> rtc.CompoundAssignStmtNode:
+        """Transform compound assignment statement."""
+        # Grammar: IDENTIFIER (PLUS_ASSIGN | MINUS_ASSIGN | MULT_ASSIGN | DIV_ASSIGN | MOD_ASSIGN) expr ";"
+        # items = [identifier_token, operator_token, expr_node]
+
+        identifier_token = items[0]  # IDENTIFIER token
+        operator_token = items[1]  # One of the ASSIGN tokens
+        expr_node = items[2]  # Expression
+
+        return rtc.CompoundAssignStmtNode(
+            identifier_token.line,
+            identifier_token.column,
+            identifier_token.value,
+            operator_token.value,  # This will be "+=", "-=", etc.
+            expr_node,
         )
 
     def break_stmt(self, items: list[Any]) -> rtc.BreakStmtNode:
