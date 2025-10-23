@@ -213,6 +213,21 @@ class AstBuilder(Transformer):
             else_block,
         )
 
+    def while_stmt(self, items: list[Any]) -> rtc.WhileStmtNode:
+        """Transform while statement into WhileStmtNode."""
+        # Grammar: "while" "(" expr ")" block
+        # items = [condition_expr, body_block]
+
+        condition = items[0]  # ExprNode
+        body = items[1]  # BlockNode
+
+        return rtc.WhileStmtNode(
+            condition.line,
+            condition.column,
+            condition,
+            body,
+        )
+
     def type_specifier(self, items: list[Any]) -> str:
         """Transform type_specifier tree into a string."""
         return items[0].value if items else "void"

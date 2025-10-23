@@ -253,6 +253,41 @@ class CodeGenVisitor:
         # Continue at merge block
         self.builder.position_at_end(merge_block)
 
+    def visit_WhileStmtNode(self, node):
+        """Generate LLVM IR for while loop using basic blocks"""
+
+        # Create basic blocks
+        loop_condition = self.builder.append_basic_block("while.condition")
+        loop_body = self.builder.append_basic_block("while.body")
+        loop_exit = self.builder.append_basic_block("while.exit")
+
+        # Jump to condition check
+        self.builder.branch(loop_condition)
+
+        # Generate condition block
+        self.builder.position_at_end(loop_condition)
+        condition_val = self.visit(node.condition)
+
+        # Convert condition to i1 (boolean) if it's not already
+        if condition_val.type != ir.IntType(1):
+            condition_val = self.builder.icmp_signed(
+                "!=", condition_val, ir.Constant(condition_val.type, 0)
+            )
+
+        # Branch based on condition: if true -> body, if false -> exit
+        self.builder.cbranch(condition_val, loop_body, loop_exit)
+
+        # Generate body block
+        self.builder.position_at_end(loop_body)
+        self.visit(node.body)
+
+        # Jump back to condition (only if no terminator like return)
+        if not self.builder.block.is_terminated:
+            self.builder.branch(loop_condition)
+
+        # Continue at exit block
+        self.builder.position_at_end(loop_exit)
+
     def visit_ValueNode(self, node):
         # CHECK BOOL BEFORE INT! (bool is subclass of int in Python)
         if isinstance(node.value, bool):

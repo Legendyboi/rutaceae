@@ -133,6 +133,22 @@ class IfStmtNode(StmtNode):
         self.else_block = else_block
 
 
+class WhileStmtNode(StmtNode):
+    def __init__(
+        self,
+        line: int,
+        column: int,
+        condition: ExprNode,
+        body: BlockNode,
+    ) -> None:
+        super().__init__(line, column)
+        assert isinstance(condition, ExprNode)
+        assert isinstance(body, BlockNode)
+
+        self.condition = condition
+        self.body = body
+
+
 class FuncDefNode(Node):
     VALID_TYPES = {"int", "string", "float", "void", "bool"}
 

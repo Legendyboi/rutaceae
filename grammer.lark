@@ -38,11 +38,14 @@ assignment_stmt: IDENTIFIER "=" expr ";"
 
 if_stmt: "if" "(" expr ")" block ("else" block)?
 
+while_stmt: "while" "(" expr ")" block
+
 ?statement: declaration_stmt
           | assignment_stmt
           | print_stmt
           | return_stmt
           | if_stmt
+          | while_stmt
           | expr_stmt
 
 ?expr_stmt: expr ";"
