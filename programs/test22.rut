@@ -1,0 +1,13 @@
+fn int main() {
+    let condition = true;
+
+    if (condition) {
+        for (let i = 0; i < 3; i = i + 1) {
+            print(i);  // Should print: 0, 1, 2
+        }
+    } else {
+        print(99);
+    }
+
+    return 0;
+}

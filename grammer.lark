@@ -64,8 +64,8 @@ continue_stmt: "continue" ";"
 
 ?expr_stmt: expr ";"
 
-?expr: expr "||" term  -> or
-     | expr "&&" term  -> and
+?expr: expr "||" term  -> or_
+     | expr "&&" term  -> and_
      | expr "==" term  -> eq
      | expr "!=" term  -> neq
      | expr "<" term   -> lt

@@ -202,7 +202,8 @@ fn int main() {
 - [x] **0.3.1** - While loops
 - [x] **0.3.2** - For loops
 - [x] **0.3.3** - Break/continue statements
-- [ ] **0.3.4** - Nested control flow
+- [x] **0.3.4** - Nested control flow
+- [ ] **0.3.5** - Language ergonomics & immutability
 
 ### 🔮 Version 0.4.x - Functions & Scope
 - [ ] **0.4.0** - Function definitions with parameters

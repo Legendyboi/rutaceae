@@ -1,0 +1,15 @@
+fn int main() {
+    for (let i = 0; i < 3; i = i + 1) {
+        for (let j = 0; j < 3; j = j + 1) {
+            if ((i == 1) && (j == 1)) {
+                break;  // Should only break inner loop
+            }
+            if (j == 2) {
+                continue;  // Should continue inner loop
+            }
+            print(i * 10 + j);
+        }
+        print(888);  // Separator between outer loop iterations
+    }
+    return 0;
+}

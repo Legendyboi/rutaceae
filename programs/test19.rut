@@ -1,0 +1,20 @@
+fn int main() {
+    let x = 5;
+    let y = 3;
+
+    if (x > 0) {
+        if (y > 0) {
+            if (x > y) {
+                print(1);  // Should print this
+            } else {
+                print(2);
+            }
+        } else {
+            print(3);
+        }
+    } else {
+        print(4);
+    }
+
+    return 0;
+}
