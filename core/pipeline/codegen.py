@@ -9,6 +9,7 @@ class CodeGenVisitor:
         self.builder = None
         self.func = None
         self.variables = {}
+        self.loop_stack = []
 
     def visit(self, node):
         method_name = "visit_" + node.__class__.__name__
@@ -261,6 +262,9 @@ class CodeGenVisitor:
         loop_body = self.builder.append_basic_block("while.body")
         loop_exit = self.builder.append_basic_block("while.exit")
 
+        # Push loop context (continue goes to condition, break goes to exit)
+        self.loop_stack.append((loop_condition, loop_exit))
+
         # Jump to condition check
         self.builder.branch(loop_condition)
 
@@ -281,9 +285,12 @@ class CodeGenVisitor:
         self.builder.position_at_end(loop_body)
         self.visit(node.body)
 
-        # Jump back to condition (only if no terminator like return)
+        # Jump back to condition (only if no terminator like return/break)
         if not self.builder.block.is_terminated:
             self.builder.branch(loop_condition)
+
+        # Pop loop context
+        self.loop_stack.pop()
 
         # Continue at exit block
         self.builder.position_at_end(loop_exit)
@@ -301,6 +308,9 @@ class CodeGenVisitor:
         loop_update = self.builder.append_basic_block("for.update")
         loop_exit = self.builder.append_basic_block("for.exit")
 
+        # Push loop context (continue goes to update, break goes to exit)
+        self.loop_stack.append((loop_update, loop_exit))
+
         # Jump to condition check
         self.builder.branch(loop_condition)
 
@@ -321,7 +331,7 @@ class CodeGenVisitor:
         self.builder.position_at_end(loop_body)
         self.visit(node.body)
 
-        # Jump to update block (only if no terminator like return)
+        # Jump to update block (only if no terminator like return/break)
         if not self.builder.block.is_terminated:
             self.builder.branch(loop_update)
 
@@ -332,6 +342,9 @@ class CodeGenVisitor:
         # Jump back to condition check
         if not self.builder.block.is_terminated:
             self.builder.branch(loop_condition)
+
+        # Pop loop context
+        self.loop_stack.pop()
 
         # Continue at exit block
         self.builder.position_at_end(loop_exit)
@@ -362,6 +375,28 @@ class CodeGenVisitor:
             global_str.initializer = string_const
 
             return self.builder.bitcast(global_str, ir.IntType(8).as_pointer())
+
+    def visit_BreakStmtNode(self, node):
+        """Generate LLVM IR for break statement"""
+        if not self.loop_stack:
+            raise Exception("Break statement outside of loop")
+
+        # Get the break target (exit block) from current loop context
+        _, break_block = self.loop_stack[-1]
+
+        # Jump to break target
+        self.builder.branch(break_block)
+
+    def visit_ContinueStmtNode(self, node):
+        """Generate LLVM IR for continue statement"""
+        if not self.loop_stack:
+            raise Exception("Continue statement outside of loop")
+
+        # Get the continue target from current loop context
+        continue_block, _ = self.loop_stack[-1]
+
+        # Jump to continue target
+        self.builder.branch(continue_block)
 
     def visit_PrintStmtNode(self, node):
         # Visit the expression to get its value

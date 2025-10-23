@@ -268,6 +268,18 @@ class AstBuilder(Transformer):
             body,
         )
 
+    def break_stmt(self, items: list[Any]) -> rtc.BreakStmtNode:
+        """Transform break statement into BreakStmtNode."""
+        # Grammar: "break" ";"
+
+        return rtc.BreakStmtNode(0, 0)
+
+    def continue_stmt(self, items: list[Any]) -> rtc.ContinueStmtNode:
+        """Transform continue statement into ContinueStmtNode."""
+        # Grammar: "continue" ";"
+
+        return rtc.ContinueStmtNode(0, 0)
+
     def type_specifier(self, items: list[Any]) -> str:
         """Transform type_specifier tree into a string."""
         return items[0].value if items else "void"

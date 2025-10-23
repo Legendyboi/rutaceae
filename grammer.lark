@@ -48,6 +48,8 @@ for_init: declaration_stmt
 
 for_stmt: "for" "(" for_init expr ";" for_update ")" block
 
+break_stmt: "break" ";"
+continue_stmt: "continue" ";"
 
 ?statement: declaration_stmt
           | assignment_stmt
@@ -56,6 +58,8 @@ for_stmt: "for" "(" for_init expr ";" for_update ")" block
           | if_stmt
           | while_stmt
           | for_stmt
+          | break_stmt
+          | continue_stmt
           | expr_stmt
 
 ?expr_stmt: expr ";"

@@ -172,6 +172,16 @@ class ForStmtNode(StmtNode):
         self.body = body
 
 
+class BreakStmtNode(StmtNode):
+    def __init__(self, line: int, column: int) -> None:
+        super().__init__(line, column)
+
+
+class ContinueStmtNode(StmtNode):
+    def __init__(self, line: int, column: int) -> None:
+        super().__init__(line, column)
+
+
 class FuncDefNode(Node):
     VALID_TYPES = {"int", "string", "float", "void", "bool"}
 
