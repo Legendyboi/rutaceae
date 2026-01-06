@@ -33,7 +33,8 @@ const_stmt: "const" IDENTIFIER (":" type_specifier)? "=" expr ";"
 
 func_def: "fn" type_specifier IDENTIFIER "(" (param ("," param)*)? ")" block
 
-type_specifier: "int" | "string" | "float" | "void" | "bool"
+type_specifier: TYPE_NAME
+TYPE_NAME: "int" | "string" | "float" | "void" | "bool"
 
 param: type_specifier IDENTIFIER
 
@@ -107,10 +108,13 @@ compound_assign_stmt: IDENTIFIER (PLUS_ASSIGN | MINUS_ASSIGN | MULT_ASSIGN | DIV
 ?primary: LITERAL
         | FLOAT_LITERAL
         | ESCAPED_STRING
+        | func_call
         | IDENTIFIER
         | TRUE
         | FALSE
         | "(" expr ")"
+
+func_call: IDENTIFIER "(" (expr ("," expr)*)? ")"
 
 block: "{" statement* "}"
 

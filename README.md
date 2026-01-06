@@ -2,7 +2,7 @@
 
 A modern, statically-typed compiled programming language built with Python, LLVM, and Lark.
 
-[![Version](https://img.shields.io/badge/version-0.2.5-blue.svg)](https://github.com/Legendyboi/rutaceae)
+[![Version](https://img.shields.io/badge/version-0.4.3-blue.svg)](https://github.com/Legendyboi/rutaceae)
 [![License](https://img.shields.io/badge/license-GPLv3-green.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.13+-brightgreen.svg)](https://www.python.org/)
 
@@ -197,7 +197,7 @@ fn int main() {
 - [x] **0.2.4** - Type annotations
 - [x] **0.2.5** - CLI refactor with verbose/PNG flags
 
-### 🚧 Version 0.3.x - Control Flow and Improvements (COMPLETE)
+### ✅ Version 0.3.x - Control Flow and Improvements (COMPLETE)
 - [x] **0.3.0** - If/else statements
 - [x] **0.3.1** - While loops
 - [x] **0.3.2** - For loops
@@ -205,11 +205,11 @@ fn int main() {
 - [x] **0.3.4** - Nested control flow
 - [x] **0.3.5** - Language ergonomics, immutability & other additions
 
-### 🔮 Version 0.4.x - Functions & Scope
-- [ ] **0.4.0** - Function definitions with parameters
-- [ ] **0.4.1** - Return values and type checking
-- [ ] **0.4.2** - Local vs global scope
-- [ ] **0.4.3** - Recursion support
+### ✅ Version 0.4.x - Functions & Scope (COMPLETE)
+- [x] **0.4.0** - Function definitions with parameters
+- [x] **0.4.1** - Function calls and return values
+- [x] **0.4.2** - Local vs global scope
+- [x] **0.4.3** - Recursion support
 - [ ] **0.4.4** - Function overloading
 
 ### 🎯 Version 0.5.x - Advanced Features
@@ -352,6 +352,6 @@ This project is licensed under the GNU General Public License v3.0 - see the [LI
 
 ---
 
-**Current Version**: 0.2.5
+**Current Version**: 0.4.3
 **Status**: Active Development
-**Next Milestone**: Control Flow (v0.3.0)
+**Next Milestone**: Arrays & Advanced Features (v0.5.0)

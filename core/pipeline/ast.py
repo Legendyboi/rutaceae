@@ -351,7 +351,27 @@ class AstBuilder(Transformer):
 
     def type_specifier(self, items: list[Any]) -> str:
         """Transform type_specifier tree into a string."""
-        return items[0].value if items else "void"
+        if not items:
+            return "void"
+        # The item is an anonymous Token with the type name as its value
+        token = items[0]
+        if hasattr(token, 'value'):
+            return str(token.value)
+        return str(token)
+
+    def param(self, items: list[Any]) -> rtc.ParamNode:
+        """Transform param into ParamNode."""
+        # Grammar: type_specifier IDENTIFIER
+        type_spec = items[0]  # Already a string from type_specifier
+        name_node = items[1]  # IdentifierExprNode
+        return rtc.ParamNode(name_node.line, name_node.column, type_spec, name_node.value)
+
+    def func_call(self, items: list[Any]) -> rtc.CallExprNode:
+        """Transform func_call into CallExprNode."""
+        # Grammar: IDENTIFIER "(" (expr ("," expr)*)? ")"
+        name_node = items[0]  # IdentifierExprNode
+        args = items[1:] if len(items) > 1 else []
+        return rtc.CallExprNode(name_node.line, name_node.column, name_node.value, args)
 
     def block(self, items: list[Any]) -> rtc.BlockNode:
         """Transform block into BlockNode."""
@@ -362,9 +382,14 @@ class AstBuilder(Transformer):
 
     def func_def(self, items: list[Any]) -> rtc.FuncDefNode:
         """Transform func_def into FuncDefNode."""
+        # Grammar: "fn" type_specifier IDENTIFIER "(" (param ("," param)*)? ")" block
         type_value = items[0]  # Already a string from type_specifier
-        identifier_token = items[1]  # Token('IDENTIFIER', 'main')
-        body = items[2]  # BlockNode from block transformer
+        identifier_token = items[1]  # IdentifierExprNode
+
+        # Items between identifier and body are parameters
+        # Body (BlockNode) is always last
+        body = items[-1]
+        params = [item for item in items[2:-1] if isinstance(item, rtc.ParamNode)]
 
         return rtc.FuncDefNode(
             identifier_token.line,
@@ -372,6 +397,7 @@ class AstBuilder(Transformer):
             identifier_token.value,
             body,
             type_value,
+            params=params,
         )
 
     def program(self, items: list[Any]) -> rtc.ProgramNode:

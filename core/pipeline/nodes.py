@@ -33,6 +33,15 @@ class IdentifierExprNode(ExprNode):
         self.value = value
 
 
+class ParamNode(Node):
+    """Represents a function parameter."""
+
+    def __init__(self, line: int, column: int, type: str, name: str) -> None:
+        super().__init__(line, column)
+        self.type = type
+        self.name = name
+
+
 class BinaryOpNode(ExprNode):
     def __init__(
         self, line: int, column: int, op: str, left: ExprNode, right: ExprNode
@@ -53,6 +62,17 @@ class UnaryOpNode(ExprNode):
         self.op = op  # '-', '!'
         assert isinstance(operand, ExprNode)
         self.operand = operand
+
+
+class CallExprNode(ExprNode):
+    """Represents a function call expression."""
+
+    def __init__(
+        self, line: int, column: int, name: str, args: list[ExprNode]
+    ) -> None:
+        super().__init__(line, column)
+        self.name = name
+        self.args = args
 
 
 class StmtNode(Node):
@@ -256,6 +276,7 @@ class FuncDefNode(Node):
         identifier: str,
         body: BlockNode,
         type: str = "int",
+        params: list = None,
     ) -> None:
         super().__init__(line, column)
         if type not in self.VALID_TYPES:
@@ -275,6 +296,9 @@ class FuncDefNode(Node):
                 f"Expected body to be BlockNode, got {body.__class__.__name__}"
             )
         self.body = body
+
+        # Store function parameters
+        self.params = params if params is not None else []
 
     def __str__(self):
         return f"FuncDefNode(type={self.type}, identifier={self.identifier}, body={self.body})"

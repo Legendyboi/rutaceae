@@ -1,0 +1,12 @@
+// Test: Scoping - function parameters don't affect caller's variables
+fn int double(int x) {
+    return x * 2;
+}
+
+fn int main() {
+    let x = 10;
+    let result = double(x);
+    print("Original x:", x);        // Should print 10
+    print("double(x) =", result);   // Should print 20
+    return 0;
+}

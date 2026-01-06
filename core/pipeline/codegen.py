@@ -8,9 +8,45 @@ class CodeGenVisitor:
         self.module = ir.Module(name="module")
         self.builder = None
         self.func = None
-        self.variables = {}
+        self.functions = {}  # name -> ir.Function for function calls
+        self.scope_stack = [{}]  # Stack of variable scopes (for local vs global)
         self.const_variables = set()
         self.loop_stack = []
+
+    @property
+    def variables(self):
+        """Current scope's variables."""
+        return self.scope_stack[-1]
+
+    def push_scope(self):
+        """Push a new scope for function/block."""
+        self.scope_stack.append({})
+
+    def pop_scope(self):
+        """Pop the current scope."""
+        self.scope_stack.pop()
+
+    def lookup_variable(self, name):
+        """Look up a variable in all scopes (innermost first)."""
+        for scope in reversed(self.scope_stack):
+            if name in scope:
+                return scope[name]
+        return None
+
+    def _get_llvm_type(self, type_str):
+        """Convert Rutaceae type string to LLVM type."""
+        if type_str == "int":
+            return ir.IntType(32)
+        elif type_str == "float":
+            return ir.DoubleType()
+        elif type_str == "bool":
+            return ir.IntType(1)
+        elif type_str == "string":
+            return ir.IntType(8).as_pointer()
+        elif type_str == "void":
+            return ir.VoidType()
+        else:
+            return ir.IntType(32)  # Default
 
     def visit(self, node):
         method_name = "visit_" + node.__class__.__name__
@@ -21,18 +57,59 @@ class CodeGenVisitor:
         raise Exception(f"No visit_{node.__class__.__name__} method")
 
     def visit_ProgramNode(self, node):
+        # Two-pass: first declare all functions, then define them
+        # This allows forward references and mutual recursion
         for func_def in node.func_defs:
-            self.visit(func_def)
+            self._declare_function(func_def)
+        for func_def in node.func_defs:
+            self._define_function(func_def)
         return self.module
 
-    def visit_FuncDefNode(self, node):
-        func_type = ir.FunctionType(ir.IntType(32), [])
+    def _declare_function(self, node):
+        """First pass: declare function signature."""
+        param_types = [self._get_llvm_type(p.type) for p in node.params]
+        ret_type = self._get_llvm_type(node.type)
+        func_type = ir.FunctionType(ret_type, param_types)
         func = ir.Function(self.module, func_type, name=node.identifier)
+
+        # Name the parameters
+        for i, param in enumerate(node.params):
+            func.args[i].name = param.name
+
+        self.functions[node.identifier] = func
+        return func
+
+    def _define_function(self, node):
+        """Second pass: define function body."""
+        func = self.functions[node.identifier]
+
+        # Create entry block
         block = func.append_basic_block(name="entry")
         self.builder = ir.IRBuilder(block)
         self.func = func
+
+        # Push new scope for this function
+        self.push_scope()
+
+        # Allocate stack space for parameters and store their values
+        for i, param in enumerate(node.params):
+            param_type = self._get_llvm_type(param.type)
+            alloca = self.builder.alloca(param_type, name=param.name)
+            self.builder.store(func.args[i], alloca)
+            self.variables[param.name] = alloca
+
+        # Generate function body
         self.visit(node.body)
+
+        # Pop scope
+        self.pop_scope()
+
         return func
+
+    def visit_FuncDefNode(self, node):
+        # This is now handled by _declare_function and _define_function
+        # Keep for compatibility with direct calls
+        pass
 
     def visit_BlockNode(self, node):
         for stmt in node.stmts:
@@ -46,12 +123,29 @@ class CodeGenVisitor:
         return ir.Constant(ir.IntType(32), node.value)
 
     def visit_IdentifierExprNode(self, node):
-        var_ptr = self.variables.get(node.value)
+        var_ptr = self.lookup_variable(node.value)
         if var_ptr is None:
             raise Exception(f"Undefined variable: {node.value}")
 
         # Load the value - for strings this loads the i8* pointer
         return self.builder.load(var_ptr, node.value)
+
+    def visit_CallExprNode(self, node):
+        """Generate LLVM IR for function call."""
+        func = self.functions.get(node.name)
+        if func is None:
+            raise Exception(f"Undefined function: {node.name}")
+
+        # Evaluate arguments
+        args = [self.visit(arg) for arg in node.args]
+
+        # Type check argument count
+        if len(args) != len(func.args):
+            raise Exception(
+                f"Function '{node.name}' expects {len(func.args)} arguments, got {len(args)}"
+            )
+
+        return self.builder.call(func, args, "calltmp")
 
     def _get_type_name(self, llvm_type):
         """Helper to get human-readable type names."""
@@ -254,7 +348,7 @@ class CodeGenVisitor:
             raise Exception(f"Cannot assign to const variable: {node.identifier}")
 
         # Look up the variable in the symbol table
-        var_ptr = self.variables.get(node.identifier)
+        var_ptr = self.lookup_variable(node.identifier)
         if var_ptr is None:
             raise Exception(f"Assignment to undefined variable: {node.identifier}")
 
@@ -432,7 +526,7 @@ class CodeGenVisitor:
             raise Exception(f"Cannot increment const variable: {node.identifier}")
 
         # Look up the variable
-        var_ptr = self.variables.get(node.identifier)
+        var_ptr = self.lookup_variable(node.identifier)
         if var_ptr is None:
             raise Exception(f"Increment of undefined variable: {node.identifier}")
 
@@ -455,7 +549,7 @@ class CodeGenVisitor:
             raise Exception(f"Cannot decrement const variable: {node.identifier}")
 
         # Look up the variable
-        var_ptr = self.variables.get(node.identifier)
+        var_ptr = self.lookup_variable(node.identifier)
         if var_ptr is None:
             raise Exception(f"Decrement of undefined variable: {node.identifier}")
 
@@ -478,7 +572,7 @@ class CodeGenVisitor:
             raise Exception(f"Cannot assign to const variable: {node.identifier}")
 
         # Look up the variable
-        var_ptr = self.variables.get(node.identifier)
+        var_ptr = self.lookup_variable(node.identifier)
         if var_ptr is None:
             raise Exception(
                 f"Compound assignment to undefined variable: {node.identifier}"

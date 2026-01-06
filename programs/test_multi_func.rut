@@ -1,0 +1,15 @@
+// Test: Multiple functions and forward calls
+fn int multiply(int a, int b) {
+    return a * b;
+}
+
+fn int square(int n) {
+    return multiply(n, n);
+}
+
+fn int main() {
+    print("3 * 4 =", multiply(3, 4));
+    print("5^2 =", square(5));
+    print("square(7) =", square(7));
+    return 0;
+}

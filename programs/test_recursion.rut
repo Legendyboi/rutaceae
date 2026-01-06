@@ -1,0 +1,13 @@
+// Test: Recursive factorial
+fn int factorial(int n) {
+    if (n <= 1) {
+        return 1;
+    }
+    return n * factorial(n - 1);
+}
+
+fn int main() {
+    print("factorial(5) =", factorial(5));
+    print("factorial(10) =", factorial(10));
+    return 0;
+}
