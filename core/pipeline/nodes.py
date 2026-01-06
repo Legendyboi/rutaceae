@@ -75,6 +75,15 @@ class CallExprNode(ExprNode):
         self.args = args
 
 
+class CastExprNode(ExprNode):
+    """Represents a type casting expression."""
+
+    def __init__(self, line: int, column: int, target_type: str, expr: ExprNode):
+        super().__init__(line, column)
+        self.target_type = target_type
+        self.expr = expr
+
+
 class StmtNode(Node):
     def __init__(self, line: int, column: int) -> None:
         super().__init__(line, column)

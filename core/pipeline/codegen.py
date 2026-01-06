@@ -147,6 +147,49 @@ class CodeGenVisitor:
 
         return self.builder.call(func, args, "calltmp")
 
+    def visit_CastExprNode(self, node):
+        """Generate LLVM IR for type casting."""
+        val = self.visit(node.expr)
+        target_type = node.target_type
+
+        # Same type - no op
+        current_type_name = self._get_type_name(val.type)
+        if current_type_name == target_type:
+            return val
+
+        # Handle conversions
+        if target_type == "int":
+            if val.type == ir.DoubleType():
+                # float -> int (truncate)
+                return self.builder.fptosi(val, ir.IntType(32), "cast_f_to_i")
+            elif val.type == ir.IntType(1):
+                # bool -> int (zero extend)
+                return self.builder.zext(val, ir.IntType(32), "cast_b_to_i")
+
+        elif target_type == "float":
+            if val.type == ir.IntType(32):
+                # int -> float
+                return self.builder.sitofp(val, ir.DoubleType(), "cast_i_to_f")
+            elif val.type == ir.IntType(1):
+                # bool -> float (uitofp unsigned int to fp)
+                return self.builder.uitofp(val, ir.DoubleType(), "cast_b_to_f")
+
+        elif target_type == "bool":
+            if val.type == ir.IntType(32):
+                # int -> bool (icmp != 0)
+                return self.builder.icmp_signed(
+                    "!=", val, ir.Constant(ir.IntType(32), 0), "cast_i_to_b"
+                )
+            elif val.type == ir.DoubleType():
+                # float -> bool (fcmp != 0.0)
+                return self.builder.fcmp_ordered(
+                    "!=", val, ir.Constant(ir.DoubleType(), 0.0), "cast_f_to_b"
+                )
+
+        raise Exception(
+            f"Cannot cast type {current_type_name} to {target_type}"
+        )
+
     def _get_type_name(self, llvm_type):
         """Helper to get human-readable type names."""
         if llvm_type == ir.IntType(32):

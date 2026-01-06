@@ -373,6 +373,16 @@ class AstBuilder(Transformer):
         args = items[1:] if len(items) > 1 else []
         return rtc.CallExprNode(name_node.line, name_node.column, name_node.value, args)
 
+    def cast_expr(self, items: list[Any]) -> rtc.CastExprNode:
+        """Transform cast_expr into CastExprNode."""
+        # Grammar: TYPE_NAME "(" expr ")"
+        # items[0] is the TYPE_NAME token (as Token or value depending on processing)
+        token = items[0]
+        target_type = str(token.value) if hasattr(token, 'value') else str(token)
+        expr = items[1]
+        return rtc.CastExprNode(token.line, token.column, target_type, expr)
+
+
     def block(self, items: list[Any]) -> rtc.BlockNode:
         """Transform block into BlockNode."""
         statements = items

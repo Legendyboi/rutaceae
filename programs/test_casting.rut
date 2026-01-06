@@ -1,0 +1,23 @@
+fn int main() {
+    let i = 10;
+    let f = float(i);
+    print("int->float: 10 ->", f);
+
+    let pi = 3.14159;
+    let pi_int = int(pi);
+    print("float->int: 3.14 ->", pi_int);
+
+    let b = bool(1);
+    print("int->bool: 1 ->", b);
+
+    let b2 = bool(0);
+    print("int->bool: 0 ->", b2);
+    
+    let f_bool = bool(0.0);
+    print("float->bool: 0.0 ->", f_bool);
+
+    let f_bool2 = bool(3.14);
+    print("float->bool: 3.14 ->", f_bool2);
+
+    return 0;
+}

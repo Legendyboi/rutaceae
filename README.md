@@ -210,7 +210,7 @@ fn int main() {
 - [x] **0.4.1** - Function calls and return values
 - [x] **0.4.2** - Local vs global scope
 - [x] **0.4.3** - Recursion support
-- [ ] **0.4.4** - Function overloading
+- [x] **0.4.4** - Explicit type casting
 
 ### 🎯 Version 0.5.x - Advanced Features
 - [ ] **0.5.0** - Arrays and indexing

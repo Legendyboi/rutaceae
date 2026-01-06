@@ -108,11 +108,14 @@ compound_assign_stmt: IDENTIFIER (PLUS_ASSIGN | MINUS_ASSIGN | MULT_ASSIGN | DIV
 ?primary: LITERAL
         | FLOAT_LITERAL
         | ESCAPED_STRING
+        | cast_expr
         | func_call
         | IDENTIFIER
         | TRUE
         | FALSE
         | "(" expr ")"
+
+cast_expr: TYPE_NAME "(" expr ")"
 
 func_call: IDENTIFIER "(" (expr ("," expr)*)? ")"
 
